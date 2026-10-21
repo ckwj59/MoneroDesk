@@ -102,6 +102,10 @@ Distributed under [GNU GPL v3 or later](LICENSE). Retain all applicable upstream
 - [MoneroOcean frontend and API usage](https://github.com/MoneroOcean/mo-pool-ui)
 - [CoinGecko price API](https://docs.coingecko.com/reference/simple-price)
 
+## Automated security review
+
+[CodeQL runs](https://github.com/ckwj59/MoneroDesk/actions/workflows/codeql.yml) analyze the Python app and unpacked C/C++ engine source. Findings appear under Security → Code scanning. Dependabot monitors supported dependencies and Actions versions. See [SECURITY.md](SECURITY.md) for scope and limitations. Scan status must be checked; this is not a malware safety certification.
+
 ## Reporting issues
 
 Include the app version, the error type, and a redacted log excerpt. Do not post seed phrases, private keys, RPC passwords, or addresses you do not want to make public.
