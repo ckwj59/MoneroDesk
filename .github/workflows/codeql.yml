@@ -56,3 +56,31 @@ jobs:
         uses: github/codeql-action/analyze@v4
         with:
           category: /language:${{ matrix.language }}
+          output: codeql-results
+      - name: Publish readable findings summary
+        if: always()
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          import json, os
+          from pathlib import Path
+          count = 0
+          def escape(value):
+              return str(value).replace('%', '%25').replace('\r', '%0D').replace('\n', '%0A')
+          rows = []
+          for path in Path('codeql-results').glob('*.sarif'):
+              for run in json.loads(path.read_text()).get('runs', []):
+                  for result in run.get('results', []):
+                      count += 1
+                      rule = result.get('ruleId', 'unknown')
+                      message = result.get('message', {}).get('text', '')
+                      location = (result.get('locations') or [{}])[0].get('physicalLocation', {})
+                      filename = location.get('artifactLocation', {}).get('uri', '')
+                      line = location.get('region', {}).get('startLine', 1)
+                      print(f'::warning file={escape(filename).replace(",", "%2C")},line={line}::{escape(rule + ": " + message)}')
+                      rows.append(f'- `{rule}` — `{filename}:{line}`: {message}')
+          with open(os.environ['GITHUB_STEP_SUMMARY'], 'a') as output:
+              output.write(f'## CodeQL results: {count} findings\n\n')
+              output.write('\n'.join(rows) if rows else 'No findings were emitted in the available SARIF files. Check the analysis step completed successfully.\n')
+              output.write('\n\nThis is an automated scan result, not a security certification.\n')
+          PY

@@ -699,7 +699,8 @@ def make_config(mode, endpoint, wallet, threads, tls, gpu_backend="off", cpu_ena
                    'asm':True, 'rx':[-1]*threads, 'rx/0':[-1]*threads},
             'opencl':{'enabled':gpu_backend=='AMD OpenCL','cache':True,'platform':'AMD'},
             'cuda':{'enabled':gpu_backend=='NVIDIA CUDA','loader':str(BASE/'engine'/cuda_files()[0]),'nvml':True},
-            'pools':[{'coin':'monero', 'url':endpoint, 'user':wallet, 'pass':'x', 'daemon':solo,
+            # No credentials on disk: the engine uses its non-secret default "x".
+            'pools':[{'coin':'monero', 'url':endpoint, 'user':wallet, 'daemon':solo,
                       'tls':bool(tls and mode != 'solo'), 'keepalive':not solo, 'daemon-poll-interval':1000}]}
 
 
