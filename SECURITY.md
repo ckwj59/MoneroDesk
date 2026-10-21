@@ -1,10 +1,10 @@
 # Security review
 
-GitHub CodeQL analyzes the Python application and the corresponding C/C++ engine source on pushes, pull requests, a weekly schedule, and manual workflow dispatch. The engine source archive is unpacked before analysis. No mining process is started by this workflow.
+GitHub CodeQL analyzes the Python application, C# installer and the corresponding C/C++ engine/plugin source on pushes, pull requests, a weekly schedule, and manual workflow dispatch. The engine source archive is unpacked before analysis. No mining process is started by this workflow.
 
 View runs under **Actions → CodeQL Security Review**, and findings under **Security → Code scanning**. Scan completion, warnings, failures, and open findings must be evaluated before claiming a clean result. A passing run is not a malware certification or a guarantee of safety.
 
-Dependabot checks supported Python dependencies and GitHub Actions versions. It does not audit all statically bundled native libraries or certify the bundled executable. Release ZIP checksums establish integrity, not safety.
+Dependabot checks supported Python dependencies and GitHub Actions versions. It does not audit all statically bundled native libraries or certify the bundled executable. Release installer checksums establish integrity, not safety.
 
 ## Reporting a vulnerability
 

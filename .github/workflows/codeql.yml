@@ -24,10 +24,10 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        language: [python, c-cpp]
+        language: [python, c-cpp, csharp]
     steps:
       - name: Check out source
-        uses: actions/checkout@v6
+        uses: actions/checkout@v7
         with:
           persist-credentials: false
       - name: Unpack corresponding engine source for C/C++ analysis
@@ -39,11 +39,12 @@ jobs:
           import zipfile
           target = Path('audit-source').resolve()
           target.mkdir(exist_ok=True)
-          with zipfile.ZipFile('source/xmrig-6.26.0-modified.zip') as archive:
-              for item in archive.infolist():
-                  if not (target / item.filename).resolve().is_relative_to(target):
-                      raise ValueError('Archive path is outside the source directory')
-              archive.extractall(target)
+          for source_archive in ('source/xmrig-6.26.0-modified.zip', 'source/xmrig-cuda-6.22.1.zip'):
+              with zipfile.ZipFile(source_archive) as archive:
+                  for item in archive.infolist():
+                      if not (target / item.filename).resolve().is_relative_to(target):
+                          raise ValueError('Archive path is outside the source directory')
+                  archive.extractall(target)
           PY
       - name: Initialize GitHub CodeQL
         uses: github/codeql-action/init@v4

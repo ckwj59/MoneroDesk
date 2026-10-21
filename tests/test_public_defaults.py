@@ -20,10 +20,12 @@ with tempfile.TemporaryDirectory(dir=ROOT/'build') as d:
  root=tk.Tk();root.withdraw();errors=[];root.report_callback_exception=lambda *args:errors.append(args)
  with patch.object(a.App,'refresh_power'),patch.object(a.App,'refresh_money'),patch.object(a.App,'query_pool'):
   ui=a.App(root)
-  assert ui.wallet.get()=='' and ui.author_wallet.get()==a.BENEFICIARY and ui.share.get()
+  assert ui.wallet.get()=='' and a.valid_wallet(a.BENEFICIARY) and ui.share.get()
+  assert ui.mode.get()=='pool' and ui.cpu_enabled.get() and not ui.gpu_enabled.get()
+  a.verify_gpu_bundle(ROOT/'engine')
   assert not ui.proc and not ui.checking and ui.total==0 and ui.allocation_elapsed==0
   ui.save()
   saved=json.loads((a.DATA/'settings.json').read_text(encoding='utf8'))
-  assert saved['wallet']=='' and saved['author_wallet']==a.BENEFICIARY and saved['share'] is True
+  assert saved['wallet']=='' and a.valid_wallet(a.BENEFICIARY) and saved['share'] is True
   root.update();assert not errors,errors;ui.close()
 print('PASS: blank main address, visible author recipient, allocation enabled, manual start, clean counters, settings privacy, engine integrity')

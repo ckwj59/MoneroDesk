@@ -1,6 +1,6 @@
 # MoneroDesk
 
-**A Windows desktop workbench for Monero CPU mining, pool monitoring, and payout management.**
+**A Windows desktop workbench for Monero CPU/GPU mining, pool monitoring, and payout management.**
 
 MoneroDesk brings mining controls, live pool statistics, price estimates, hardware information, and payout thresholds into one interface. It is designed for people who want visible controls and clear information about where their mining work is sent.
 
@@ -10,6 +10,8 @@ MoneroDesk brings mining controls, live pool statistics, price estimates, hardwa
 
 | Feature | What it provides |
 | --- | --- |
+| CPU and GPU controls | Separate CPU/GPU checkmark buttons, measured backend hashrates over a 10-second window, combined total, and visible GPU startup logs. Both backends share the selected pool, wallet and optional allocation schedule. |
+| Bundled NVIDIA runtime | The installer contains the CUDA 12.9 XMRig plugin and NVRTC runtime libraries. A compatible vendor display driver is still required; no separate CUDA Toolkit download is needed. |
 | Visible mining controls | Start and stop manually; monitor local hashrate, accepted shares, connection status, runtime, and activity logs. |
 | Three mining modes | Local-node solo mining, authorized remote-node solo mining, and pool mining. HashVault and MoneroOcean presets are included. |
 | Controlled pool switching | Stop the previous worker and wait for it to exit before starting the new pool. A new mining job confirms the connection. Live statistics follow the actual running target. |
@@ -24,18 +26,18 @@ MoneroDesk brings mining controls, live pool statistics, price estimates, hardwa
 
 ## Download and run
 
-Download the portable Windows package:
+Download the single-file installer (no manual extraction of runtime files):
 
-- [MoneroDesk v1.0.1 — Windows x64 ZIP](https://github.com/ckwj59/MoneroDesk/raw/refs/heads/main/downloads/MoneroDesk-Windows-x64-v1.0.1.zip)
+- [Download MoneroDesk v1.1.0 — Windows x64 installer (.exe)](https://github.com/ckwj59/MoneroDesk/raw/refs/heads/main/downloads/MoneroDesk-Windows-x64-v1.1.0-Setup.exe)
 - [SHA-256 checksum](downloads/SHA256SUMS.txt)
 - [Release notes](downloads/RELEASE_NOTES.md)
 
 The downloadable distribution is published in this repository's `downloads/` directory.
 
-1. Extract the complete archive to a writable folder. Keep its directory structure.
-2. Run `MoneroDesk.exe`.
+1. Close an existing MoneroDesk GPU session, then run `MoneroDesk-Windows-x64-v1.1.0-Setup.exe`.
+2. Confirm installation, then open the **Monero Desk GPU** desktop shortcut. The installer uses `%LOCALAPPDATA%/MoneroDesk-GPU`, preserves existing settings, and keeps a separate D-drive installation intact.
 3. Enter **your own Monero mainnet payout address**. Never enter a seed phrase or private key.
-4. Choose a mining mode and pool or node, then select a CPU percentage.
+4. Pool mining is the initial default. Enter your payout address, select a pool and CPU percentage. CPU and GPU have separate checkmark controls; GPU is off by default. Select NVIDIA CUDA or AMD OpenCL when enabling GPU.
 5. Read the disclosure and click **Start mining**. The app does not start mining automatically at Windows startup.
 6. Open **Price & earnings** to inspect supported pools, or **Live pool data** to manage the corresponding automatic payout threshold.
 
@@ -65,11 +67,17 @@ Some translations are machine-generated. Translation corrections are welcome.
 ## Scope and limitations
 
 - Windows 10/11 x64. The source development environment uses Python 3.11.
-- This distribution mines with the CPU. Its engine is built without CUDA, OpenCL, or MSR support and does not automatically elevate privileges.
+- This Windows x64 distribution includes CPU, CUDA and OpenCL backends, with MSR support disabled. The GPU plugin and matching runtime libraries are bundled; the installer does not install display drivers or automatically start mining.
+- **GPU efficiency:** Monero RandomX favors CPUs. CPU/GPU mining together may reduce CPU and total hashrate through shared power, cooling or bandwidth. Compare stable measurements; adding a GPU does not guarantee more earnings.
+- Windows x64 has been device-tested. Linux and other CPU architectures have a native source-build entry only; they have not been runtime-validated here. See [compatibility and native builds](COMPATIBILITY.md). Windows ARMv7/RISC-V installers and a Linux GPU runtime bundle are not supplied.
 - More threads do not necessarily mean better hashrate. Cache, memory, temperature, and scheduling affect results.
 - Earnings are not guaranteed. Theoretical estimates do not represent credited income or complete electricity costs. Solo mining may produce no block rewards for a long time.
 - Many consumer computers do not expose a valid whole-system power meter. Administrator access cannot create missing sensor data. CPU package power is not treated as whole-computer power. Use an external meter to measure actual wall consumption.
 - This is an independent third-party project, not an official product of Monero, XMRig, HashVault, MoneroOcean, or CoinGecko.
+
+## Security scan status
+
+[View GitHub CodeQL runs](https://github.com/ckwj59/MoneroDesk/actions/workflows/codeql.yml). CodeQL checks Python, corresponding C/C++ sources and the C# installer. Scan findings are separate from a successful workflow run. This project does not claim GitHub malware certification, code-signing certification, or guaranteed safety.
 
 ## Build from source
 

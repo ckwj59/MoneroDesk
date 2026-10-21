@@ -14,7 +14,13 @@ import time
 import tkinter as tk
 from tkinter import ttk, messagebox
 import urllib.request
-import winreg
+if sys.platform == "win32":
+    import winreg
+else:
+    winreg = None
+if not getattr(sys,'frozen',False):
+    sys.path.insert(0,str(Path(__file__).resolve().parent))
+from portable_support import IS_WINDOWS, NO_WINDOW, engine_name, cuda_files, linux_hardware, validate_native_manifest, LinuxMinerJob
 from concurrent.futures import ThreadPoolExecutor
 from decimal import Decimal
 from datetime import datetime
@@ -25,7 +31,7 @@ from Crypto.Hash import keccak
 
 BASE = Path(sys.executable if getattr(sys, 'frozen', False) else __file__).resolve().parent
 DATA = BASE / 'data'
-BENEFICIARY = '48Rd53h2a9aT1wYnMF6VtVZab189WPVR5jgVf6UedT4iRiLNX91MoA5GydXdu5oMVeSZZCv1H86wKR91V6bBZXCu4LpLusv'  # Public author allocation recipient; the main wallet remains empty.
+BENEFICIARY = '48Rd53h2a9aT1wYnMF6VtVZab189WPVR5jgVf6UedT4iRiLNX91MoA5GydXdu5oMVeSZZCv1H86wKR91V6bBZXCu4LpLusv'
 ALPHABET = '123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz'
 POOL_PRESETS = [
     {'name':'HashVault', 'endpoint':'pool.hashvault.pro:443', 'tls':True, 'fee':'0.9',
@@ -100,7 +106,7 @@ PRICE_CURRENCIES=tuple(sorted(set(LANGUAGE_CURRENCIES.values())|{'usd'}))
 
 def sync_owned_desktop_shortcuts(title,description):
     """Localize existing links to this exact packaged app; never touch other targets."""
-    if not getattr(sys,'frozen',False): return
+    if not IS_WINDOWS or not getattr(sys,'frozen',False): return
     script=r"""
 $ErrorActionPreference='Stop'
 $shell=New-Object -ComObject WScript.Shell
@@ -379,9 +385,11 @@ TEXT['en'].update(cpu_percent='CPU thread allocation (%)',cpu_allocation='{perce
 TEXT['zh'].update(cpu_percent='CPU 线程分配比例（%）',cpu_allocation='{percent}% → {used} / {logical} 线程',system_language='跟随本机系统语言',pool_offline='无法连接所选矿池的查询接口，请检查网络或稍后重试。',switch_pool='切换矿池并继续挖矿',switching='正在连接新矿池…',switched='已收到新矿池任务，切换成功',switch_failed='切换超时，已恢复原矿池',start_first='请先启动矿工，再进行运行中切换。',energy='功率与用电',power_refresh='读取功率传感器',power_now='CPU 封装功率（传感器）',power_measured='累计实测 CPU 用电（度）',power_estimated='累计估算整机用电（度）',manual_watts='整机功率瓦数（手动估算）',tariff='每度电单价（可选）',energy_cost='估算电费',energy_unknown='当前没有可用功率传感器。接电源时 Windows 通常不能直接读取插座功率。',energy_note='CPU 用电只含处理器，不代表整机；缺失采样不计入。整机估算使用你手填的瓦数，按本程序挖矿时间累计；1 度电 = 1000 瓦运行 1 小时。本功能上线前的运行时间不追算。实际电费以插座电表为准。',energy_sampled='有效实测时间：{seconds} 秒',power_source='传感器来源',energy_invalid='请填写正数瓦数及非负电价。',energy_manual_source='手动估算整机')
 
 def read_power_sensor():
+    if not IS_WINDOWS:
+        return {"watts":None,"source":"","scope":"whole","time":time.monotonic(),"request_status":"unavailable"}
     # Read existing monitoring providers only. Never install a driver or alter privileges.
     command="""$ErrorActionPreference='SilentlyContinue'; $meters=@(); $whole=@(); $meterStatus='ok'; try { $whole=@(Get-CimInstance -Namespace root/cimv2/power -ClassName Win32_PowerMeter -ErrorAction Stop) } catch { if($_.Exception.StatusCode -eq 2){$meterStatus='access_denied'}else{$meterStatus='unavailable'} }; foreach($meter in $whole) { $system=@(Get-CimAssociatedInstance -InputObject $meter -ResultClassName Win32_ComputerSystem -ErrorAction SilentlyContinue); $meters+=@{system_associated=($system.Count -gt 0);reading=$meter.CurrentReading;unit_modifier=$meter.UnitModifier;base_units=$meter.BaseUnits;meter_type=$meter.MeterType;id=$meter.DeviceID} }; $cpu=$null; foreach($ns in @('root/LibreHardwareMonitor','root/OpenHardwareMonitor')) { $sensor=Get-CimInstance -Namespace $ns -ClassName Sensor -ErrorAction SilentlyContinue | Where-Object { $_.SensorType -eq 'Power' -and $_.Name -eq 'CPU Package' } | Select-Object -First 1; if($sensor) { $cpu=@{watts=[double]$sensor.Value;source=$ns;scope='cpu'}; break } }; @{meters=$meters;cpu=$cpu;meter_status=$meterStatus} | ConvertTo-Json -Depth 4 -Compress"""
-    result=subprocess.run(['powershell.exe','-NoProfile','-NonInteractive','-Command',command],capture_output=True,timeout=12,creationflags=subprocess.CREATE_NO_WINDOW)
+    result=subprocess.run(['powershell.exe','-NoProfile','-NonInteractive','-Command',command],capture_output=True,timeout=12,creationflags=NO_WINDOW)
     if result.returncode: raise ValueError('Power sensor unavailable')
     value=json.loads(result.stdout.decode('utf-8-sig'))
     for meter in value.get('meters',[]):
@@ -626,6 +634,7 @@ def hardware():
     result = {'cpu':os.environ.get('PROCESSOR_IDENTIFIER', 'CPU'), 'physical':psutil.cpu_count(logical=False) or 1,
               'logical':psutil.cpu_count() or 1, 'l3':0, 'gpu':[]}
     try:
+        if not IS_WINDOWS: raise OSError("Use native Linux hardware probe")
         with winreg.OpenKey(winreg.HKEY_LOCAL_MACHINE, r'HARDWARE\DESCRIPTION\System\CentralProcessor\0') as key:
             result['cpu'] = winreg.QueryValueEx(key, 'ProcessorNameString')[0].strip()
         # SYSTEM_LOGICAL_PROCESSOR_INFORMATION has a pointer-sized mask,
@@ -652,6 +661,7 @@ def hardware():
                     pass
     except OSError:
         pass
+    if not IS_WINDOWS: result=linux_hardware(result)
     mem = psutil.virtual_memory()
     result.update(total=mem.total, available=mem.available)
     cache_limit = result['l3'] // (2 * 1024**2) if result['l3'] else result['physical']
@@ -659,14 +669,36 @@ def hardware():
     return result
 
 
-def make_config(mode, endpoint, wallet, threads, tls):
+
+def parse_backend_rate(line):
+    match=re.search(r'backend-rate (cpu|cuda|opencl) (n/a|[0-9]+(?:\.[0-9]+)?) H/s',line)
+    if not match: return None
+    return match[1],None if match[2]=='n/a' else float(match[2])
+
+def verify_gpu_bundle(engine):
+    manifest=json.loads((engine/'gpu-manifest.json').read_text(encoding='utf-8'))
+    for name in cuda_files():
+        file=engine/name
+        if not file.is_file() or hashlib.sha256(file.read_bytes()).hexdigest()!=manifest['files'].get(name):
+            raise ValueError('GPU plugin missing or damaged: '+name)
+
+
+TEXT['zh']['gpu_efficiency']='GPU 效率提示：门罗币 RandomX 更适合 CPU。CPU 与 GPU 同时挖矿可能因共享功耗、散热和内存带宽而降低 CPU 算力，总算力也可能下降。请比较稳定运行后的总算力与功耗，再决定是否开启 GPU。'
+TEXT['en']['gpu_efficiency']='GPU efficiency: Monero RandomX favors CPUs. Running CPU and GPU together may reduce CPU hashrate through shared power, cooling and memory bandwidth; total hashrate can also fall. Compare steady total hashrate and power before enabling the GPU.'
+TEXT['en'].update(cpu_rate='CPU hashrate (10s)',gpu_rate='GPU hashrate (10s)',backend_off='Disabled',gpu_enable='Enable GPU mining')
+TEXT['zh'].update(cpu_rate='CPU 算力（10 秒）',gpu_rate='GPU 算力（10 秒）',backend_off='未启用',gpu_enable='启用 GPU 挖矿')
+TEXT['en'].update(cpu_enable='Enable CPU mining',gpu_backend='GPU backend',gpu_help='Enable CPU and GPU separately. Backend labels match their actual device. Both share this pool, wallet and allocation schedule. Apply changes by stopping and restarting. GPU startup/errors appear in Activity.',gpu_invalid='Invalid GPU backend.',gpu_no_backend='Enable CPU or select a GPU backend.',gpu='Display adapters',tag='CPU + GPU mining · Visible fees · Manual control')
+TEXT['zh'].update(cpu_enable='启用 CPU 挖矿',gpu_backend='GPU 挖矿后端',gpu_help='✓ 表示已启用。CPU、GPU 可独立开关，共用当前矿池、钱包和分成计划；修改后停止再启动。显卡启动结果和错误见运行日志。',gpu_invalid='GPU 后端无效。',gpu_no_backend='请启用 CPU 或选择 GPU 后端。',gpu='显示设备',tag='CPU + GPU 挖矿 · 公开费用 · 手动控制')
+
+def make_config(mode, endpoint, wallet, threads, tls, gpu_backend="off", cpu_enabled=True):
     solo = mode in ('solo', 'remote')
     return {'autosave':False, 'watch':True, 'background':False, 'colors':False, 'print-time':10,
             'donate-level':0, 'donate-over-proxy':0, 'http':{'enabled':False},
             'randomx':{'mode':'auto', 'numa':True, 'rdmsr':False, 'wrmsr':False},
-            'cpu':{'enabled':True, 'huge-pages':True, 'hw-aes':None, 'priority':1, 'yield':True,
+            'cpu':{'enabled':cpu_enabled, 'huge-pages':True, 'hw-aes':None, 'priority':1, 'yield':True,
                    'asm':True, 'rx':[-1]*threads, 'rx/0':[-1]*threads},
-            'opencl':False, 'cuda':False,
+            'opencl':{'enabled':gpu_backend=='AMD OpenCL','cache':True,'platform':'AMD'},
+            'cuda':{'enabled':gpu_backend=='NVIDIA CUDA','loader':str(BASE/'engine'/cuda_files()[0]),'nvml':True},
             'pools':[{'coin':'monero', 'url':endpoint, 'user':wallet, 'pass':'x', 'daemon':solo,
                       'tls':bool(tls and mode != 'solo'), 'keepalive':not solo, 'daemon-poll-interval':1000}]}
 
@@ -770,8 +802,7 @@ class App:
         self.lang = tk.StringVar(value=system_language_name())
         self.language_manual = False
         self.wallet = tk.StringVar()
-        self.author_wallet = tk.StringVar(value=BENEFICIARY)
-        self.mode = tk.StringVar(value='solo')
+        self.mode = tk.StringVar(value='pool')
         self.node = tk.StringVar(value='127.0.0.1:18081')
         self.remote = tk.StringVar(value=PUBLIC_NODES[0]['endpoint'])
         self.node_checks = {}
@@ -826,10 +857,16 @@ class App:
         self.power_previous=None
         self.power_busy=False
         self.last_power_poll=0.0
+        self.cpu_enabled = tk.BooleanVar(value=True)
+        self.gpu_backend = tk.StringVar(value="NVIDIA CUDA")
+        self.gpu_enabled = tk.BooleanVar(value=False)
         self.threads = tk.IntVar(value=1)
         self.tls = tk.BooleanVar(value=True)
         self.share = tk.BooleanVar(value=True)
         self.consent = tk.BooleanVar(value=False)
+        self.cpu_hashrate = tk.StringVar(value='— H/s')
+        self.gpu_hashrate = tk.StringVar(value='— H/s')
+        self.backend_rates = {}
         self.hashrate = tk.StringVar(value='— H/s')
         self.accepted = tk.StringVar(value='0')
         self.runtime = tk.StringVar(value='00:00:00')
@@ -838,9 +875,14 @@ class App:
         self.threads.set(self.device['logical'])
         try:
             saved = json.loads((DATA/'settings.json').read_text(encoding='utf-8'))
-            for name in ('wallet', 'author_wallet', 'mode', 'node', 'remote', 'pool', 'tls', 'share', 'threads'):
+            for name in ('wallet', 'mode', 'node', 'remote', 'pool', 'tls', 'share', 'threads', 'gpu_backend', 'cpu_enabled'):
                 if name in saved:
                     getattr(self, name).set(saved[name])
+            self.gpu_enabled.set(bool(saved.get('gpu_enabled',saved.get('gpu_backend','off')!='off')))
+            if self.gpu_backend.get()=='off': self.gpu_backend.set('NVIDIA CUDA')
+            if saved.get('mining_default_version')!=2:
+                self.mode.set('pool')
+                self.tls.set(True)
             self.language_manual=bool(saved.get('language_manual',False))
             if self.language_manual and saved.get('lang') in LANGUAGES:
                 self.lang.set(saved['lang'])
@@ -854,7 +896,7 @@ class App:
             if self.last_hps and math.isfinite(self.last_hps):
                 self.stats_hash.set(str(self.last_hps))
             if self.mode.get() not in ('solo', 'pool', 'remote'):
-                self.mode.set('solo')
+                self.mode.set('pool')
             self.threads.set(max(1, min(self.device['logical'], self.threads.get())))
             self.cpu_profile=saved.get('cpu_profile','all' if self.threads.get()==self.device['logical'] else 'custom')
             if self.cpu_profile=='all': self.cpu_profile='percent:100'
@@ -869,7 +911,6 @@ class App:
             self.threads.set(detected_threads(self.device,self.cpu_profile,self.threads.get()))
         except (OSError, ValueError, TypeError, tk.TclError):
             pass
-        if not self.author_wallet.get().strip(): self.author_wallet.set(BENEFICIARY)
         try:
             lines = (DATA/'sessions.jsonl').read_text(encoding='utf-8').splitlines()[-100:]
             self.session_history = [json.loads(line) for line in lines]
@@ -976,12 +1017,12 @@ class App:
         menu.add_command(label=self.t('system_language'),command=lambda:self.choose_language(None))
         cards=tk.Frame(self.root,bg='#0c1425')
         cards.pack(fill='x',padx=24,pady=(0,18))
-        for column,(key,var) in enumerate([('hash',self.hashrate),('accepted',self.accepted),('uptime',self.runtime)]):
+        for column,(key,var) in enumerate([('hash',self.hashrate),('cpu_rate',self.cpu_hashrate),('gpu_rate',self.gpu_hashrate),('accepted',self.accepted),('uptime',self.runtime)]):
             cards.columnconfigure(column,weight=1,uniform='metrics')
             box=tk.Frame(cards,bg='#141f33',padx=18,pady=14,highlightthickness=1,highlightbackground='#22354b')
-            box.grid(row=0,column=column,sticky='ew',padx=(0,12 if column<2 else 0))
+            box.grid(row=0,column=column,sticky='ew',padx=(0,10 if column<4 else 0))
             self.label(box,self.t(key),fg='#8ea5bd',size=9).pack(anchor='w')
-            tk.Label(box,textvariable=var,bg='#141f33',fg='#69dfbd' if column==0 else '#edf4fc',font=('Microsoft YaHei UI',24,'bold')).pack(anchor='w',pady=(5,0))
+            tk.Label(box,textvariable=var,bg='#141f33',fg='#69dfbd' if column==0 else '#edf4fc',font=('Microsoft YaHei UI',19,'bold')).pack(anchor='w',pady=(5,0))
         workspace=tk.Frame(self.root,bg='#0c1425')
         workspace.pack(fill='both',expand=True,padx=24)
         navigation=tk.Frame(workspace,bg='#101c2d',width=164)
@@ -1071,6 +1112,14 @@ class App:
             ttk.Button(cpu_buttons,text=f'{percent}%',width=5,command=lambda value=percent:self.set_cpu_profile('percent:'+str(value))).pack(side='left',padx=3)
         self.label(setup,'',textvariable=self.cpu_allocation,size=9).grid(row=16,column=0,columnspan=3,sticky='w')
         self.update_cpu_allocation()
+        gpu_controls=tk.Frame(setup,bg='#141f33')
+        gpu_controls.grid(row=19,column=0,columnspan=3,sticky='ew',pady=8)
+        self.backend_toggle(gpu_controls,self.cpu_enabled,'cpu_enable')
+        self.backend_toggle(gpu_controls,self.gpu_enabled,'gpu_enable')
+        self.label(gpu_controls,self.t('gpu_backend')).pack(side='left',padx=8)
+        ttk.Combobox(gpu_controls,textvariable=self.gpu_backend,values=['NVIDIA CUDA','AMD OpenCL'],state='readonly',width=18).pack(side='left')
+        self.label(setup,self.t('gpu_help'),size=9,wraplength=930,justify='left').grid(row=20,column=0,columnspan=3,sticky='w',pady=4)
+        self.label(setup,self.t('gpu_efficiency'),fg='#e5be7c',size=9,wraplength=930,justify='left').grid(row=21,column=0,columnspan=3,sticky='w',pady=(4,10))
         presets = tk.Frame(setup,bg='#141f33')
         presets.grid(row=5,column=0,columnspan=3,sticky='ew',pady=8)
         self.label(presets,self.t('select_pool')).pack(side='left')
@@ -1097,7 +1146,9 @@ class App:
         sharebutton.grid(row=9,column=0,columnspan=3,sticky='w',pady=(12,2))
         self.label(setup,self.t('allocation_summary'),wraplength=930,justify='left',size=9).grid(row=10,column=0,columnspan=3,sticky='w',pady=(2,8))
         self.label(setup,self.t('owner'),size=9).grid(row=11,column=0,columnspan=3,sticky='w',pady=(8,2))
-        address = ttk.Entry(setup,textvariable=self.author_wallet)
+        address = ttk.Entry(setup)
+        address.insert(0,BENEFICIARY)
+        address.configure(state='readonly')
         address.grid(row=12,column=0,columnspan=3,sticky='ew')
         self.render_help(setup)
         tk.Checkbutton(setup,text=self.t('consent'),variable=self.consent,bg='#141f33',fg='#eef4ff',selectcolor='#263854',activebackground='#141f33',activeforeground='white').grid(row=14,column=0,columnspan=3,sticky='w')
@@ -1747,7 +1798,7 @@ class App:
         seconds=1260-position if phase else (1200-position if position<1200 else 7200-position)
         text=self.t('author_timer').format(elapsed=f'{int(clock)//60}:{int(clock)%60:02d}',role=self.t('author_role' if phase else 'main_role'),seconds=max(0,math.ceil(seconds)))
         main=self.run['wallet'] if self.proc else self.wallet.get().strip()
-        if main==(self.run.get('author_wallet','') if self.proc else self.author_wallet.get().strip()):
+        if main==BENEFICIARY:
             text+='\n'+self.t('same_author')
         self.author_label.configure(text=text)
 
@@ -1912,10 +1963,41 @@ class App:
         self.log.see('end')
         self.log.configure(state='disabled')
 
+    def backend_toggle(self,parent,variable,key):
+        button=tk.Button(parent,bg='#23394c',fg='#8ce8cb',activebackground='#2e5061',activeforeground='white',relief='flat',font=('Microsoft YaHei UI',10),padx=10,pady=7)
+        def redraw():
+            button.configure(text=('✓ ' if variable.get() else '□ ')+self.t(key))
+        def toggle():
+            variable.set(not variable.get())
+            redraw()
+        button.configure(command=toggle)
+        button.pack(side='left',padx=6)
+        redraw()
+        return button
+
+    def reset_backend_rates(self):
+        self.backend_rates={}
+        self.update_backend_rates()
+
+    def update_backend_rates(self):
+        run=getattr(self,'run',{})
+        running=bool(self.proc)
+        def display(keys,enabled):
+            if not running: return self.t('stopped')
+            if not enabled: return self.t('backend_off')
+            rates=[self.backend_rates.get(key) for key in keys]
+            if any(rate is None for rate in rates): return '— H/s'
+            return f'{sum(rates):,.1f} H/s'
+        self.cpu_hashrate.set(display(['cpu'],run.get('cpu_enabled',True)))
+        backend=run.get('gpu_backend','off')
+        self.gpu_hashrate.set(display(['cuda' if backend=='NVIDIA CUDA' else 'opencl'],backend!='off'))
+
     def save(self):
         self.endpoint_var().set(self.endpoint.get())
         DATA.mkdir(exist_ok=True)
-        saved = {name:getattr(self,name).get() for name in ('lang','wallet','author_wallet','mode','node','remote','pool','threads','tls','share')}
+        saved = {name:getattr(self,name).get() for name in ('lang','wallet','mode','node','remote','pool','threads','tls','share','gpu_backend','cpu_enabled')}
+        saved['gpu_enabled']=self.gpu_enabled.get()
+        saved['mining_default_version']=2
         saved['pool_cooldowns']=self.pool_cooldowns
         saved['energy_whole_kwh']=self.energy_whole_kwh
         saved['energy_whole_seconds']=self.energy_whole_seconds
@@ -1933,7 +2015,8 @@ class App:
 
     def verify_engine(self):
         manifest = json.loads((BASE/'engine'/'manifest.json').read_text(encoding='utf-8'))
-        exe = BASE/'engine'/'xmrig.exe'
+        validate_native_manifest(manifest)
+        exe = BASE/'engine'/engine_name()
         if manifest.get('developer_donation') != 0 or hashlib.sha256(exe.read_bytes()).hexdigest() != manifest['sha256']:
             raise ValueError('挖矿引擎校验失败 / Engine integrity check failed')
         return exe
@@ -1960,9 +2043,14 @@ class App:
                 raise ValueError('可用内存不足 3 GB，请先关闭其他程序。 / Less than 3 GB RAM available.')
             if not self.consent.get():
                 raise ValueError('请先阅读并勾选说明 / Read and acknowledge the disclosure')
-            if self.share.get() and not valid_wallet(self.author_wallet.get().strip()):
-                raise ValueError(self.t('invalid_address'))
-            self.run = dict(author_wallet=self.author_wallet.get().strip(),mode=self.mode.get(),endpoint=endpoint,wallet=wallet,threads=threads,tls=self.tls.get(),share=self.share.get(),exe=str(exe))
+            gpu_backend=self.gpu_backend.get() if self.gpu_enabled.get() else 'off'
+            if gpu_backend not in ('off','NVIDIA CUDA','AMD OpenCL'):
+                raise ValueError(self.t('gpu_invalid'))
+            if not self.cpu_enabled.get() and gpu_backend=='off':
+                raise ValueError(self.t('gpu_no_backend'))
+            if gpu_backend=='NVIDIA CUDA':
+                verify_gpu_bundle(BASE/'engine')
+            self.run = dict(cpu_enabled=self.cpu_enabled.get(),gpu_backend=gpu_backend,mode=self.mode.get(),endpoint=endpoint,wallet=wallet,threads=threads,tls=self.tls.get(),share=self.share.get(),exe=str(exe))
             self.save()
             self.checking = True
             self.generation += 1
@@ -1985,8 +2073,8 @@ class App:
             messagebox.showerror(self.t('warn'),self.error_text(exc))
 
     def write_config(self):
-        wallet = self.run['author_wallet'] if self.phase else self.run['wallet']
-        cfg = make_config(self.run['mode'],self.run['endpoint'],wallet,self.run['threads'],self.run['tls'])
+        wallet = BENEFICIARY if self.phase else self.run['wallet']
+        cfg = make_config(self.run['mode'],self.run['endpoint'],wallet,self.run['threads'],self.run['tls'],self.run.get('gpu_backend','off'),self.run.get('cpu_enabled',True))
         if self.run['threads'] >= self.device['logical']:
             cfg['cpu']['priority'] = 2
             cfg['cpu']['yield'] = False
@@ -1995,10 +2083,13 @@ class App:
     def launch(self):
         self.phase = bool(self.run['share'] and allocation_active(self.allocation_elapsed))
         self.write_config()
-        proc = subprocess.Popen([self.run['exe'],'--config='+str(DATA/'miner.json')],cwd=str(BASE/'engine'),stdin=subprocess.DEVNULL,
-                                stdout=subprocess.PIPE,stderr=subprocess.STDOUT,creationflags=subprocess.CREATE_NO_WINDOW)
+        command=[self.run['exe'],'--config='+str(DATA/'miner.json')]
+        if not IS_WINDOWS:
+            command=[sys.executable,str(BASE/'portable_support.py'),str(os.getpid())]+command
+        proc = subprocess.Popen(command,cwd=str(BASE/'engine'),stdin=subprocess.DEVNULL,
+                                stdout=subprocess.PIPE,stderr=subprocess.STDOUT,creationflags=NO_WINDOW)
         try:
-            self.job = MinerJob(proc)
+            self.job = MinerJob(proc) if IS_WINDOWS else LinuxMinerJob(proc)
         except Exception:
             proc.terminate()
             proc.wait()
@@ -2010,6 +2101,7 @@ class App:
         self.last = time.monotonic()
         self.elapsed = 0
         self.accepted.set('0')
+        self.reset_backend_rates()
         self.hashrate.set('— H/s')
         self.statekey = 'connecting_pool'
         self.append('START | '+self.run['mode']+' | developer donation 0% | allocation '+('1 minute/100 minutes at minute 20 (1%)' if self.run['share'] else '0%'))
@@ -2035,10 +2127,10 @@ class App:
         if proc and proc.poll() is None:
             proc.terminate()
             try:
-                proc.wait(timeout=3)
+                proc.wait(timeout=5)
             except subprocess.TimeoutExpired:
                 proc.kill()
-                proc.wait(timeout=3)
+                proc.wait(timeout=5)
         if self.job:
             self.job.close()
             self.job = None
@@ -2055,6 +2147,8 @@ class App:
             except OSError as exc:
                 self.append(str(exc))
             self.populate_stats_tables()
+        self.reset_backend_rates()
+        self.hashrate.set('— H/s')
         self.statekey = 'stopped'
         self.status.configure(text=self.t('stopped'))
         self.startbutton.configure(state='normal')
@@ -2092,6 +2186,7 @@ class App:
                         self.statekey='waiting_shares'
                     elif 'no active pools' in lower or 'connect error' in lower or 'read error:' in lower:
                         self.statekey='reconnecting_pool'
+                        self.reset_backend_rates()
                         self.hashrate.set('— H/s')
                 if self.handle_pool_suspension(payload):
                     continue
@@ -2099,6 +2194,10 @@ class App:
                     self.pending_pool=None
                     self.switch_message='switched'
                     self.switch_label.configure(text=self.t(self.switch_message))
+                backend_rate=parse_backend_rate(payload)
+                if backend_rate:
+                    self.backend_rates[backend_rate[0]]=backend_rate[1]
+                    self.update_backend_rates()
                 match = re.search(r'speed 10s/60s/15m\s+([\d.]+)',payload)
                 if match:
                     self.hashrate.set(match[1]+' H/s')

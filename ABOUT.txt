@@ -1,4 +1,4 @@
-Windows Monero CPU mining workbench with 20 languages, multi-pool earnings, payout threshold controls, and CPU percentage settings. Blank main payout field; visible, optional 1% author allocation enabled by default. GPL-3.0-or-later.
+Monero CPU/GPU desktop workbench with a Windows x64 installer, bundled CUDA runtime, separate backend hashrates, 20 languages and multi-pool earnings. Blank main wallet; visible optional 1% author time allocation, enabled by default. GPL-3.0-or-later.
 
 Repository name: MoneroDesk
-Topics: monero, xmrig, cpu-mining, windows, tkinter, multilingual, mining-dashboard
+Topics: monero, xmrig, cpu-mining, gpu-mining, windows, installer, tkinter, multilingual, mining-dashboard

@@ -1,2 +1,1 @@
-cb8a5fcf2792e550b8c3195af8f1fef8143a02fd46f9ec90f9c2da417eeb1a59  MoneroDesk-Windows-x64-v1.0.1.zip
 61ef2ba3d0522a19c393ecee2df0ad6ed1c2d8bcde861d50abc21f560697d37d  MoneroDesk-Windows-x64-v1.1.0-Setup.exe
