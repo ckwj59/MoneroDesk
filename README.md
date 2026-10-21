@@ -1,119 +1,94 @@
 # MoneroDesk
 
-**A Windows desktop workbench for Monero CPU/GPU mining, pool monitoring, and payout management.**
+### Monero mining and pool monitoring, in one desktop app.
 
-MoneroDesk brings mining controls, live pool statistics, price estimates, hardware information, and payout thresholds into one interface. It is designed for people who want visible controls and clear information about where their mining work is sent.
+Install a Windows app, choose your pool, and manage your CPU and optional GPU from one place. MoneroDesk brings mining controls, separate device hashrates, pool balances and payout thresholds into a multilingual interface—so you can spend less time editing configuration files.
 
-**Windows x64 · 20 interface languages · Multiple pools · Blank main payout field · GPL-3.0-or-later**
+**Windows x64 · CPU + optional GPU · 20 language presets · Open source · GPL-3.0-or-later**
 
-## Features and practical advantages
+**Transparent defaults:** mining starts manually. Your main payout field is blank. Optional **1% author mining-time allocation is enabled by default**, displayed in the app, and can be turned off. Pool and network fees are separate.
 
-| Feature | What it provides |
+## Get started
+
+**[Download the Windows installer →](https://github.com/ckwj59/MoneroDesk/raw/refs/heads/main/downloads/MoneroDesk-Windows-x64-v1.1.0-Setup.exe)**
+
+[Verify SHA-256](downloads/SHA256SUMS.txt) · [What's new](downloads/RELEASE_NOTES.md) · [Compatibility](COMPATIBILITY.md) · [Security scan runs](https://github.com/ckwj59/MoneroDesk/actions/workflows/codeql.yml)
+
+1. Close an existing MoneroDesk GPU session, then double-click the installer. The app, mining engine, NVIDIA CUDA plugin and required CUDA runtime libraries are included.
+2. Open **Monero Desk GPU** from your desktop. Enter **your own Monero mainnet payout address** and select a pool. Pool mode is the initial default.
+3. Choose your CPU allocation, review the visible fee/allocation settings, and click **Start mining**. GPU mining is optional and off by default.
+
+No separate CUDA Toolkit download is needed. A compatible NVIDIA or AMD display driver is still required. The installer uses `%LOCALAPPDATA%/MoneroDesk-GPU`, preserves existing settings, and keeps a separate D-drive installation intact.
+
+## Why use MoneroDesk?
+
+- **Keep control of your hardware.** Independent CPU/GPU switches, CPU percentage controls, manual start/stop, accepted-share counts and readable activity logs.
+- **See what each device contributes.** CPU, GPU and total hashrates are displayed separately. Backend measurements use a 10-second window; unavailable data is not invented as zero.
+- **Switch pools with clear feedback.** HashVault and MoneroOcean presets are included. Switching stops the old worker before starting the new one; a job from the new pool confirms the connection.
+- **Track earnings across supported pools.** Inspect confirmed unpaid balances, available pending amounts, total paid and remaining amounts to each pool's payout threshold. Pool balances remain separate.
+- **Manage supported payout thresholds.** Read the pool's policy, choose an eligible amount, and verify submitted settings by reading them back. This changes an automatic payout threshold; it does not force an immediate withdrawal.
+- **Use a familiar language.** Twenty language presets with flags, saved preferences and mapped reference currencies. Some translations are machine-generated, and newer labels may fall back to English; corrections are welcome.
+- **Understand the numbers.** Recent blocks, network statistics, reference prices and theoretical estimates are kept separate from actual pool-credited earnings. Supported hardware power readings are integrated into kWh; missing sensors stay unavailable.
+
+Pool mining is the easiest starting point. Local-node solo and authorized remote-node solo modes are also available for users who understand their node setup. Optional wallet queries require a separately running `monero-wallet-rpc`; the official wallet GUI alone does not expose that interface.
+
+## CPU or CPU + GPU?
+
+Monero's RandomX favors CPUs. Running a GPU alongside a CPU can reduce CPU hashrate through shared power, cooling or memory bandwidth; total performance can fall too. MoneroDesk displays this warning in the app. Compare steady total hashrate and power before deciding to enable GPU mining. More threads or more devices do not guarantee more earnings.
+
+The Windows package includes NVIDIA CUDA and AMD OpenCL backends. RTX 5070 plugin loading and device detection have been tested; a complete GPU accepted-share validation and AMD device testing have not been completed here.
+
+## Fees, privacy and the author allocation
+
+| Item | What to expect |
 | --- | --- |
-| CPU and GPU controls | Separate CPU/GPU checkmark buttons, measured backend hashrates over a 10-second window, combined total, and visible GPU startup logs. Both backends share the selected pool, wallet and optional allocation schedule. |
-| Bundled NVIDIA runtime | The installer contains the CUDA 12.9 XMRig plugin and NVRTC runtime libraries. A compatible vendor display driver is still required; no separate CUDA Toolkit download is needed. |
-| Visible mining controls | Start and stop manually; monitor local hashrate, accepted shares, connection status, runtime, and activity logs. |
-| Three mining modes | Local-node solo mining, authorized remote-node solo mining, and pool mining. HashVault and MoneroOcean presets are included. |
-| Controlled pool switching | Stop the previous worker and wait for it to exit before starting the new pool. A new mining job confirms the connection. Live statistics follow the actual running target. |
-| Multiple-pool earnings | View confirmed unpaid balance, pending earnings where available, total paid, current account threshold, minimum permitted threshold, and remaining amount for each pool separately. |
-| Automatic payout settings | Read the pool's current policy, enter an XMR threshold or use its minimum, then submit and verify the value by reading it back. |
-| CPU percentage controls | Detect the local CPU and translate a percentage into an appropriate logical-thread count. Display physical cores and cache-related information. |
-| 20 languages with flags | Follow the Windows UI language on first launch, or save a manual language selection for later sessions. The app title follows the saved language. |
-| Matching display currencies | Show actual JPY quotes for Japanese, CNY for Chinese, and other mapped currencies with explicit ISO codes. Retain a USD price reference. Missing quotes are not relabeled as another currency. |
-| Chain statistics and estimates | Query recent blocks, network hashrate, hashrate share, and theoretical earnings. Estimated earnings remain separate from actual credited balances. |
-| Hardware-based energy readings | Request whole-computer power from the Windows power-meter interface and integrate valid samples into kWh. Unsupported readings are shown as unavailable. |
-| Clean public defaults | The main payout field starts empty. The visible author recipient is prefilled and optional 1% time allocation is enabled by default. No personal configuration, account cache, or mining history is shipped. |
+| App | Free and open source. |
+| Bundled XMRig developer donation | Set to 0% in the disclosed custom engine source. |
+| Author time allocation | Optional 1%, enabled by default; visible and removable on the Mining page. |
+| Pool and payout fees | Set by each provider. Reaching a threshold does not guarantee immediate payment. |
+| Your information | Enter a public payout address only. The app does not request a seed phrase or private key and does not provide a wallet-transfer function. |
 
-## Download and run
+When author allocation is enabled, accumulated mining runtime **20:00–21:00**, then **120:00–121:00**, **220:00–221:00**, and so on uses the author recipient. Pauses stop the clock; normal restarts resume it. CPU and GPU share this schedule. This allocates mining time—not an exact percentage of coins or a transfer from your wallet.
 
-Download the single-file installer (no manual extraction of runtime files):
+The disclosed author recipient is:
 
-- [Download MoneroDesk v1.1.0 — Windows x64 installer (.exe)](https://github.com/ckwj59/MoneroDesk/raw/refs/heads/main/downloads/MoneroDesk-Windows-x64-v1.1.0-Setup.exe)
-- [SHA-256 checksum](downloads/SHA256SUMS.txt)
-- [Release notes](downloads/RELEASE_NOTES.md)
+```text
+48Rd53h2a9aT1wYnMF6VtVZab189WPVR5jgVf6UedT4iRiLNX91MoA5GydXdu5oMVeSZZCv1H86wKR91V6bBZXCu4LpLusv
+```
 
-The downloadable distribution is published in this repository's `downloads/` directory.
+The public package includes no developer-machine settings, account caches, mining history or credentials. Local settings live in `data/` beside the app; do not publish that folder. Pool queries send the public query address to the selected provider. Reference prices are requested from CoinGecko.
 
-1. Close an existing MoneroDesk GPU session, then run `MoneroDesk-Windows-x64-v1.1.0-Setup.exe`.
-2. Confirm installation, then open the **Monero Desk GPU** desktop shortcut. The installer uses `%LOCALAPPDATA%/MoneroDesk-GPU`, preserves existing settings, and keeps a separate D-drive installation intact.
-3. Enter **your own Monero mainnet payout address**. Never enter a seed phrase or private key.
-4. Pool mining is the initial default. Enter your payout address, select a pool and CPU percentage. CPU and GPU have separate checkmark controls; GPU is off by default. Select NVIDIA CUDA or AMD OpenCL when enabling GPU.
-5. Read the disclosure and click **Start mining**. The app does not start mining automatically at Windows startup.
-6. Open **Price & earnings** to inspect supported pools, or **Live pool data** to manage the corresponding automatic payout threshold.
+## Compatibility and practical limits
 
-Pool balances are settled separately and cannot be combined across providers. Reaching a threshold does not guarantee immediate payment; the pool schedules payouts and may charge network fees.
+The ready-to-install release is **Windows 10/11 x64**. Linux and other CPU architectures have a native source-build entry and a documented validation status; they are **not all tested or supplied as ready-to-install packages**. See [COMPATIBILITY.md](COMPATIBILITY.md) before building for another device.
 
-Optional local-wallet balance queries require a separately running `monero-wallet-rpc` service. The official wallet GUI alone does not expose that wallet RPC interface.
+Many consumer computers do not expose a whole-system power meter. CPU package power is not whole-computer power, and administrator access cannot create missing sensors. Use an external meter when actual wall consumption is needed.
 
-## Language preferences
+Earnings are not guaranteed. Estimates are not credited balances, and solo mining may produce no rewards for a long time. This is an independent project, without official endorsement from Monero, XMRig or the listed pools.
 
-The first launch follows the Windows UI language. A manual selection is saved under `data/settings.json` and restored on subsequent launches, including the window title and reference currency. Select **Follow system language** to return to automatic detection.
+## Inspect, build and contribute
 
-When running the packaged executable, the app also updates an existing desktop shortcut that targets that exact executable so its name and description follow the selected language. It does not rename unrelated shortcuts or replace an existing file with the same name.
-
-Some translations are machine-generated. Translation corrections are welcome.
-
-## Privacy, fees, and optional time allocation
-
-- The main payout address is empty. Each user must enter their own main address.
-- The publicly disclosed author allocation recipient is `48Rd53h2a9aT1wYnMF6VtVZab189WPVR5jgVf6UedT4iRiLNX91MoA5GydXdu5oMVeSZZCv1H86wKR91V6bBZXCu4LpLusv`. This is a public receiving address, not a private key.
-- No developer-machine `data/`, logs, pool account caches, energy history, or session records are included.
-- Optional 1% mining-time allocation is **enabled by default** and shown on the Mining page. Users can uncheck it before starting; it is not hidden or mandatory.
-- When enabled, the recipient receives the 20:00–21:00 window of accumulated mining runtime, then 120:00–121:00, 220:00–221:00, and so on: one minute per 100 minutes. Pauses stop the clock; normal restarts resume it. This allocates mining time, not an exact amount of coins.
-- The bundled custom XMRig engine has its developer donation level set to zero. Pool fees and payout network fees remain provider-controlled.
-- Settings are stored locally in `data/` beside the app. Do not upload that directory to a public repository.
-- Pool queries send the public query address to the selected provider. Prices are requested from CoinGecko. The app does not request seed phrases or private keys and does not include a wallet-transfer function.
-
-## Scope and limitations
-
-- Windows 10/11 x64. The source development environment uses Python 3.11.
-- This Windows x64 distribution includes CPU, CUDA and OpenCL backends, with MSR support disabled. The GPU plugin and matching runtime libraries are bundled; the installer does not install display drivers or automatically start mining.
-- **GPU efficiency:** Monero RandomX favors CPUs. CPU/GPU mining together may reduce CPU and total hashrate through shared power, cooling or bandwidth. Compare stable measurements; adding a GPU does not guarantee more earnings.
-- Windows x64 has been device-tested. Linux and other CPU architectures have a native source-build entry only; they have not been runtime-validated here. See [compatibility and native builds](COMPATIBILITY.md). Windows ARMv7/RISC-V installers and a Linux GPU runtime bundle are not supplied.
-- More threads do not necessarily mean better hashrate. Cache, memory, temperature, and scheduling affect results.
-- Earnings are not guaranteed. Theoretical estimates do not represent credited income or complete electricity costs. Solo mining may produce no block rewards for a long time.
-- Many consumer computers do not expose a valid whole-system power meter. Administrator access cannot create missing sensor data. CPU package power is not treated as whole-computer power. Use an external meter to measure actual wall consumption.
-- This is an independent third-party project, not an official product of Monero, XMRig, HashVault, MoneroOcean, or CoinGecko.
-
-## Security scan status
-
-[View GitHub CodeQL runs](https://github.com/ckwj59/MoneroDesk/actions/workflows/codeql.yml). CodeQL checks Python, corresponding C/C++ sources and the C# installer. Scan findings are separate from a successful workflow run. This project does not claim GitHub malware certification, code-signing certification, or guaranteed safety.
-
-## Build from source
+The desktop interface, native build helpers, C# installer source, corresponding modified mining-engine/plugin source and third-party notices are available in this repository.
 
 ```powershell
 python -m pip install -r requirements.txt
 powershell -ExecutionPolicy Bypass -File .\build.ps1
-```
-
-The output is `dist/MoneroDesk/`. Keep `engine/` beside the executable.
-
-- `app.py`: desktop application source.
-- `locales/`, `flags/`, `app.ico`, `app.png`: interface resources.
-- `engine/manifest.json`: the exact bundled engine SHA-256, checked before starting a worker.
-- `source/`: complete modified engine source archive, dependency archive, modification notes, and rebuild script.
-- `licenses/`: third-party license notices.
-
-The build does not copy local runtime data. Run the offline public-default checks before distributing:
-
-```powershell
 python tests/test_public_defaults.py
 ```
 
-## License and upstream projects
+The GUI build produces `dist/MoneroDesk/`; keep its `engine/` folder beside the executable. For Linux/native architecture builds, follow [COMPATIBILITY.md](COMPATIBILITY.md) and `build_native.py`. Build-only dependencies are available under `source/`; users installing the app do not need them.
 
-Distributed under [GNU GPL v3 or later](LICENSE). Retain all applicable upstream copyright and license notices. See [THIRD_PARTY.md](THIRD_PARTY.md), `licenses/`, and the corresponding engine source in `source/`.
+Contributions that help more people use the app are welcome:
 
-- [Monero](https://www.getmonero.org/)
-- [XMRig](https://github.com/xmrig/xmrig)
-- [HashVault API](https://hashvault.pro/monero/api)
-- [MoneroOcean frontend and API usage](https://github.com/MoneroOcean/mo-pool-ui)
-- [CoinGecko price API](https://docs.coingecko.com/reference/simple-price)
+- Improve translations and accessibility.
+- Report reproducible pool/API issues with the app version, device model and redacted logs.
+- Test native builds on Linux, ARM or RISC-V, clearly separating build success from actual mining results.
+- Improve diagnostics, hardware measurements and performance comparisons.
 
-## Automated security review
+Open an [issue](https://github.com/ckwj59/MoneroDesk/issues) for a bug or feature request, or submit a pull request. Never include private keys, seed phrases, credentials or private account data.
 
-[CodeQL runs](https://github.com/ckwj59/MoneroDesk/actions/workflows/codeql.yml) analyze the Python app and unpacked C/C++ engine source. Findings appear under Security → Code scanning. Dependabot monitors supported dependencies and Actions versions. See [SECURITY.md](SECURITY.md) for scope and limitations. Scan status must be checked; this is not a malware safety certification.
+## Security review
 
-## Reporting issues
+[GitHub CodeQL runs](https://github.com/ckwj59/MoneroDesk/actions/workflows/codeql.yml) analyze the Python app, corresponding C/C++ sources and C# installer. Check both the run result and reported findings. A successful scan is not GitHub malware certification or a guarantee of safety; checksums establish file integrity only. See [SECURITY.md](SECURITY.md).
 
-Include the app version, the error type, and a redacted log excerpt. Do not post seed phrases, private keys, RPC passwords, or addresses you do not want to make public.
+Distributed under [GPL-3.0-or-later](LICENSE). Retain the notices in [THIRD_PARTY.md](THIRD_PARTY.md), `licenses/` and `source/`.
