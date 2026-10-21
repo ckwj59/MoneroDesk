@@ -1,0 +1,1 @@
+UI language catalogs are machine-translated from the English interface. Technical names may remain in English. No wallet addresses or user settings were sent for translation. Review financial wording against the English source.

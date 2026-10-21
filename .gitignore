@@ -1,0 +1,13 @@
+data/
+**/data/
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+build/
+dist/
+*.spec
+*.log
+artifacts/
+.env
+.env.*
