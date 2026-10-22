@@ -1,1 +1,1 @@
-61ef2ba3d0522a19c393ecee2df0ad6ed1c2d8bcde861d50abc21f560697d37d  MoneroDesk-Windows-x64-v1.1.0-Setup.exe
+cfa1a0a2da51fcc5ca95bd98cf9b36048cd775f90680f9bd95040365ef9725c6  XMR-CPU-GPU-Windows-x64-Setup.exe

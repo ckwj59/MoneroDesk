@@ -1,5 +1,4 @@
 name: CodeQL Security Review
-
 on:
   push:
     branches: [main]
@@ -8,10 +7,8 @@ on:
   workflow_dispatch:
   schedule:
     - cron: '23 3 * * 1'
-
 permissions:
   contents: read
-
 jobs:
   analyze:
     name: Analyze ${{ matrix.language }}
@@ -26,61 +23,36 @@ jobs:
       matrix:
         language: [python, c-cpp, csharp]
     steps:
-      - name: Check out source
-        uses: actions/checkout@v7
+      - uses: actions/checkout@v7
         with:
           persist-credentials: false
-      - name: Unpack corresponding engine source for C/C++ analysis
+      - name: Unpack pinned RandomX corresponding source
         if: matrix.language == 'c-cpp'
-        shell: bash
         run: |
           python3 - <<'PY'
           from pathlib import Path
           import zipfile
-          target = Path('audit-source').resolve()
-          target.mkdir(exist_ok=True)
-          for source_archive in ('source/xmrig-6.26.0-modified.zip', 'source/xmrig-cuda-6.22.1.zip'):
-              with zipfile.ZipFile(source_archive) as archive:
-                  for item in archive.infolist():
-                      if not (target / item.filename).resolve().is_relative_to(target):
-                          raise ValueError('Archive path is outside the source directory')
-                  archive.extractall(target)
+          target = Path('native').resolve()
+          target.mkdir(parents=True, exist_ok=True)
+          with zipfile.ZipFile('engine/RandomX-source.zip') as archive:
+              for item in archive.infolist():
+                  if not (target/item.filename).resolve().is_relative_to(target):
+                      raise ValueError('Archive entry escapes destination')
+              archive.extractall(target)
           PY
-      - name: Initialize GitHub CodeQL
-        uses: github/codeql-action/init@v4
+      - uses: github/codeql-action/init@v4
         with:
           languages: ${{ matrix.language }}
           build-mode: none
           queries: security-extended
-      - name: Analyze and upload security findings
-        uses: github/codeql-action/analyze@v4
+      - uses: github/codeql-action/analyze@v4
         with:
           category: /language:${{ matrix.language }}
           output: codeql-results
-      - name: Publish readable findings summary
+      - name: Save available analysis output
         if: always()
-        shell: bash
-        run: |
-          python3 - <<'PY'
-          import json, os
-          from pathlib import Path
-          count = 0
-          def escape(value):
-              return str(value).replace('%', '%25').replace('\r', '%0D').replace('\n', '%0A')
-          rows = []
-          for path in Path('codeql-results').glob('*.sarif'):
-              for run in json.loads(path.read_text()).get('runs', []):
-                  for result in run.get('results', []):
-                      count += 1
-                      rule = result.get('ruleId', 'unknown')
-                      message = result.get('message', {}).get('text', '')
-                      location = (result.get('locations') or [{}])[0].get('physicalLocation', {})
-                      filename = location.get('artifactLocation', {}).get('uri', '')
-                      line = location.get('region', {}).get('startLine', 1)
-                      print(f'::warning file={escape(filename).replace(",", "%2C")},line={line}::{escape(rule + ": " + message)}')
-                      rows.append(f'- `{rule}` — `{filename}:{line}`: {message}')
-          with open(os.environ['GITHUB_STEP_SUMMARY'], 'a') as output:
-              output.write(f'## CodeQL results: {count} findings\n\n')
-              output.write('\n'.join(rows) if rows else 'No findings were emitted in the available SARIF files. Check the analysis step completed successfully.\n')
-              output.write('\n\nThis is an automated scan result, not a security certification.\n')
-          PY
+        uses: actions/upload-artifact@v4
+        with:
+          name: codeql-${{ matrix.language }}
+          path: codeql-results
+          if-no-files-found: warn

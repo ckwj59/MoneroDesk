@@ -1,0 +1,2 @@
+# Preserve distributed source bytes for comparison with the validated installer.
+* -text

@@ -1,12 +1,9 @@
-# Third-party notices
+# Third-party components
 
-- XMRig 6.26.0: GPL-3.0; upstream https://github.com/xmrig/xmrig . Default/minimum donation levels changed from 1 to 0; per-backend hashrate log lines added in src/core/Miner.cpp; CUDA and OpenCL enabled at build time, MSR disabled. Modified complete source and rebuild instructions are in source/.
-- XMRig static dependencies: libuv 1.51.0, OpenSSL 3.0.16, hwloc 2.12.1. See source/DEPENDENCIES.md and licenses/.
-- Python 3.11.9, psutil 7.2.2, PyCryptodome 3.23.0, PyInstaller 6.21.0: notices in licenses/.
-- Country flag PNGs retrieved from https://flagcdn.com/ (Flagpedia country flag assets). Flags identify language presets and do not imply exclusive language usage.
-- app.ico and app.png are the application artwork. Monero/XMRig and pool names remain their respective owners' names. No official endorsement is claimed.
+- Upstream RandomX, commit recorded in `engine/randomx-manifest.json`: BSD-3-Clause. License and corresponding source archive are included in `engine/`.
+- Standalone SChernykh/RandomX_CUDA AES/Blake helpers and the independent CUDA adapter: GPL-3.0-or-later. Source is in `native/` and `source/CUDA-source.zip`; notices are preserved. These are not the XMRig engine or its plugin API.
+- Python, OpenSSL, psutil, PyCryptodome and PyInstaller: notices are in `licenses/`. PyInstaller's applicable bootloader exception is retained.
+- NVIDIA's CUDA runtime is linked into the native GPU library; redistribution remains subject to NVIDIA CUDA terms. A display driver is not included.
+- Original interface and local translations: GPL-3.0-or-later; language notices remain in `locales/`.
 
-The repository provides modified engine/plugin sources, build instructions, build-dependency archives and license notices. The installer contains all runtime libraries and corresponding engine/plugin source, with a download link for build-only dependencies.
-
-- XMRig CUDA 6.22.1: GPL-3.0; corresponding source archive and license are included. https://github.com/xmrig/xmrig-cuda/releases/tag/v6.22.1
-- NVIDIA NVRTC CUDA 12.9 runtime libraries: redistribution subject to NVIDIA CUDA terms, https://docs.nvidia.com/cuda/eula/index.html . The hardware vendor display driver is not included.
+Preserve all license notices when redistributing source or binaries. This release has no XMRig executable, plugin or source dependency; previous Git history may contain the former implementation.

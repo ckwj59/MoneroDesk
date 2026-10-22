@@ -26,10 +26,10 @@ def platform_id():
     return ('windows' if IS_WINDOWS else sys.platform)+'-'+native_arch()
 
 def engine_name():
-    return 'xmrig.exe' if IS_WINDOWS else 'xmrig'
+    return 'XMR-Engine.exe' if IS_WINDOWS else 'xmr-engine'
 
 def cuda_files():
-    return ('xmrig-cuda.dll','nvrtc64_120_0.dll','nvrtc-builtins64_129.dll') if IS_WINDOWS else ('libxmrig-cuda.so',)
+    return ('xmr-randomx-cuda.dll',) if IS_WINDOWS else ('libxmr-cuda.so',)
 
 def linux_hardware(result, proc=Path('/proc'), system=Path('/sys')):
     try:

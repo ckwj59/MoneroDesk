@@ -1,11 +1,11 @@
 {
-  "version": "6.26.0-custom",
+  "version": "XMR-independent-0.2-development",
+  "target": "windows-x64",
   "developer_donation": 0,
-  "sha256": "479455f071615563965f6b83ebfa7dafa6796e42303814124c8bcd00eea02504",
-  "source": "xmrig/xmrig v6.26.0 b2ca72480c58d197e18c885d9fc1a0c8d517e60a",
+  "sha256": "6efe306d3291aa778bc6fc724182b03661bc972fc7c2f07c36aeddcdacb8c68e",
+  "source": "independent engine with tevador/RandomX algorithm library",
   "gpu_backends": [
-    "cuda",
-    "opencl"
+    "cuda-experimental"
   ],
-  "security_patch": "2026-10-22-memory-input-and-file-permissions"
+  "release_ready": false
 }

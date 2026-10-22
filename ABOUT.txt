@@ -1,4 +1,0 @@
-Monero mining, pool balances and payout controls in one multilingual desktop app. Windows x64 installer with CPU/GPU controls and bundled CUDA runtime. Open source, manual start, transparent optional author allocation.
-
-Repository name: MoneroDesk
-Topics: monero, xmrig, cpu-mining, gpu-mining, windows, installer, tkinter, multilingual, mining-dashboard, cryptocurrency

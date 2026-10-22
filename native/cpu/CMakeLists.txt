@@ -1,0 +1,6 @@
+cmake_minimum_required(VERSION 3.24)
+project(XmrCpuBatch LANGUAGES CXX)
+add_library(xmr-cpu-batch SHARED batch.cpp)
+target_compile_features(xmr-cpu-batch PRIVATE cxx_std_17)
+target_link_libraries(xmr-cpu-batch PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/../build/Release/randomx.lib")
+target_compile_options(xmr-cpu-batch PRIVATE /O2)

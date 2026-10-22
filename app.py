@@ -1,4 +1,4 @@
-"""Monero Desk: visible, manual CPU miner controller. GPL-3.0-or-later."""
+"""XMR: original full interface, independent engine integration under development."""
 import ctypes
 from ctypes import wintypes
 import hashlib
@@ -36,7 +36,7 @@ ALPHABET = '123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz'
 POOL_PRESETS = [
     {'name':'HashVault', 'endpoint':'pool.hashvault.pro:443', 'tls':True, 'fee':'0.9',
      'source':'https://hashvault.pro/monero/ports'},
-    {'name':'MoneroOcean', 'endpoint':'gulf.moneroocean.stream:20128', 'tls':True, 'fee':'0',
+    {'name':'MoneroOcean', 'endpoint':'gulf.moneroocean.stream:20001', 'tls':True, 'fee':'0',
      'source':'https://moneroocean.stream'},
 ]
 PUBLIC_NODES = [
@@ -75,7 +75,7 @@ TEXT['zh'].update(nodes='备用公开节点', remote='远程节点独立挖矿',
                   untested='未检测', probing='检测中', online='主网已同步', failed='连接失败', copied='已复制',
                   node_help='公开节点可用于 GUI Wallet。也可选择远程独挖，开始前会检查挖矿 RPC 权限；连得通不代表允许挖矿。远程节点不会加速本地区块链同步，也不是矿池。',
                   node_privacy='检测只查询节点状态，不发送钱包地址。点击开始远程挖矿后才向选中节点提交公开收款地址。HTTP 节点未加密；可优先使用 HTTPS。第三方服务可能随时离线。',
-                  tls='远程连接 TLS（端口需支持）', checking='正在检查节点…')
+                  tls='TLS 加密连接（建议保持勾选）', checking='正在检查节点…')
 TEXT['en'].update(nodes='Public backup nodes', remote='Solo via remote node', check_all='Test all', check_one='Test selected',
                   use_node='Use selected node', copy_node='Copy endpoint', node_name='Provider', node_addr='Endpoint',
                   node_height='Height', latency='Latency', node_status='Status / last checked',
@@ -459,6 +459,30 @@ for language_code in LANGUAGES.values():
         except (OSError,ValueError):
             TEXT[language_code] = dict(TEXT['en'])
 
+TEXT['en'].update(tls_connected='TLS verified · logging in',preparing_dataset='Connected · preparing RandomX memory')
+TEXT['zh'].update(tls_connected='TLS 加密已验证 · 正在登录矿池',preparing_dataset='已连接矿池 · 正在准备 RandomX 内存')
+
+for _locale in TEXT.values():
+    _locale['title']='XMR'
+
+def check_pool_transport(endpoint,tls):
+    if not tls:
+        raise ValueError('必须启用 TLS 加密连接。 / Verified TLS is required for pool mining.')
+    import re
+    if not re.fullmatch(r'[A-Za-z0-9.-]+:[0-9]{1,5}',endpoint) or not 1<=int(endpoint.rsplit(':',1)[1])<=65535:
+        raise ValueError('地址格式应为 host:port / Expected host:port')
+    # The engine performs the verified TLS handshake once, with same-pool
+    # encrypted endpoint retries. Do not block startup on a duplicate handshake.
+
+
+# XMR_TLS_TRANSPORT_LABELS
+TEXT['en']['transport_tls']='TLS / pinned certificate verified'
+TEXT['zh']['transport_tls']='TLS / 固定证书校验'
+
+# XMR_CONNECTION_UI_V2
+TEXT['zh']['engine_failed']='启动或运行失败，请查看运行日志；连接超时可手动选择其他矿池'
+TEXT['en']['engine_failed']='Start/run failed; see Activity. For a timeout, retry or select another pool.'
+
 def detected_threads(device,profile,current=1):
     if profile.startswith('percent:'):
         percent=max(1,min(100,float(profile.split(':',1)[1])))
@@ -472,7 +496,10 @@ def detected_threads(device,profile,current=1):
     return max(1,min(device['logical'],current))
 
 def provider_for(endpoint):
+    if endpoint.lower() in ('gulf.moneroocean.stream:20001','gulf.moneroocean.stream:20128','gulf.moneroocean.stream:443'):
+        return 'MoneroOcean'
     return next((pool['name'] for pool in POOL_PRESETS if pool['endpoint'].lower()==endpoint.strip().lower()),None)
+
 
 def mo_json(path):
     req=urllib.request.Request('https://api.moneroocean.stream/'+path,headers={'User-Agent':'MoneroDesk/2.6','Accept':'application/json'})
@@ -785,6 +812,19 @@ class MinerJob:
             self.handle = None
 
 
+# XMR_LIVE_REPORTING_V1
+for _locale in TEXT.values():
+    for _rate_key in ('cpu_rate','gpu_rate'):
+        if _rate_key in _locale:_locale[_rate_key]=_locale[_rate_key].replace('10','1')
+TEXT['en'].update(connecting_dns='Resolving pool address',connecting_tcp='Connecting to pool TCP port',connecting_tls='Checking encrypted TLS connection',connection_retry='Connection timed out; retrying once')
+TEXT['zh'].update(connecting_dns='正在解析矿池地址',connecting_tcp='正在连接矿池 TCP 端口',connecting_tls='正在建立并校验 TLS 加密连接',connection_retry='连接超时，正在重试一次')
+TEXT['zh'].update(cpu_rate='CPU 算力（每秒刷新）',gpu_rate='GPU 算力（每秒刷新）')
+TEXT['en'].update(cpu_rate='CPU hashrate (1s refresh)',gpu_rate='GPU hashrate (1s refresh)')
+TEXT['zh'].update(reconnecting='连接中断，等待自动重连',connection_warning='保活回复延迟，正在检查矿池数据')
+TEXT['en'].update(reconnecting='Disconnected; automatic reconnect pending',connection_warning='Keepalive reply delayed; monitoring pool traffic')
+TEXT['zh']['connecting_proxy']='正在通过已启用的系统本地代理连接矿池'
+TEXT['en']['connecting_proxy']='Connecting through enabled local system proxy'
+
 class App:
     def __init__(self, root):
         self.root = root
@@ -921,6 +961,10 @@ class App:
             self.pool.set(POOL_PRESETS[0]['endpoint'])
             if self.mode.get()=='pool':
                 self.tls.set(True)
+        # XMR_TLS_ONLY_MIGRATION: upgrade the previous explicit plaintext experiment.
+        if self.pool.get()=='gulf.moneroocean.stream:10001':
+            self.pool.set('gulf.moneroocean.stream:20001')
+            self.tls.set(True)
         self.endpoint.set(self.endpoint_var().get())
         self.pool_query_address.set(self.wallet.get())
         if self.cooldown_remaining(self.endpoint.get()): self.switch_message='pool_paused'
@@ -1124,7 +1168,7 @@ class App:
         presets = tk.Frame(setup,bg='#141f33')
         presets.grid(row=5,column=0,columnspan=3,sticky='ew',pady=8)
         self.label(presets,self.t('select_pool')).pack(side='left')
-        choices=[f"{pool['name']} | {pool['fee']}%" for pool in POOL_PRESETS]
+        choices=[f"{pool['name']} | {pool['fee']}% | "+self.t('transport_tls') for pool in POOL_PRESETS]
         picker=ttk.Combobox(presets,values=choices,state='readonly',width=29)
         picker.pack(side='left',padx=12)
         selected=next((i for i,pool in enumerate(POOL_PRESETS) if pool['endpoint']==self.pool.get()),None)
@@ -2026,6 +2070,9 @@ class App:
         if self.proc or self.checking:
             return
         try:
+            if self.gpu_enabled.get():
+                if self.gpu_backend.get()!='NVIDIA CUDA' or self.mode.get()!='pool':
+                    raise ValueError('当前独立 GPU 后端仅支持 NVIDIA CUDA 矿池模式。 / Independent GPU currently supports NVIDIA CUDA pool mode only.')
             exe = self.verify_engine()
             wallet = self.wallet.get().strip()
             if not valid_wallet(wallet):
@@ -2066,6 +2113,8 @@ class App:
                         check_local_node(run['endpoint'])
                     elif run['mode'] == 'remote':
                         check_remote_mining(run['endpoint'],run['tls'],run['wallet'])
+                    elif run['mode'] == 'pool':
+                        check_pool_transport(run['endpoint'],run['tls'])
                     self.events.put(('ready',generation))
                 except Exception as exc:
                     self.events.put(('error',(generation,str(exc))))
@@ -2079,7 +2128,9 @@ class App:
         if self.run['threads'] >= self.device['logical']:
             cfg['cpu']['priority'] = 2
             cfg['cpu']['yield'] = False
-        (DATA/'miner.json').write_text(json.dumps(cfg,indent=2),encoding='utf-8')
+        temp=DATA/'miner-config.tmp'
+        temp.write_text(json.dumps(cfg,indent=2),encoding='utf-8')
+        temp.replace(DATA/'miner.json')
 
     def launch(self):
         self.phase = bool(self.run['share'] and allocation_active(self.allocation_elapsed))
@@ -2173,7 +2224,12 @@ class App:
                     self.stop()
             elif kind == 'error' and self.checking and payload[0] == self.generation:
                 self.append(payload[1])
+                failed_switch=bool(self.pending_pool)
                 self.stop()
+                self.statekey='engine_failed'
+                if failed_switch:
+                    self.switch_message='switch_failed'
+                    self.switch_label.configure(text=self.t(self.switch_message))
                 messagebox.showerror(self.t('warn'),payload[1])
             elif kind == 'log':
                 if isinstance(payload,tuple):
@@ -2181,9 +2237,43 @@ class App:
                     if log_generation!=self.generation or not self.proc or log_pid!=self.proc.pid:
                         continue
                 self.append(payload)
+                if self.proc and payload.startswith('XMR | '):
+                    try:
+                        transport=json.loads(payload[6:])
+                        if transport.get('event')=='connection_phase':
+                            stage=transport.get('stage','').lower()
+                            if stage in ('dns','tcp','tls'):
+                                self.statekey='connecting_'+stage
+                                self.connection_detail=', '.join(transport.get('addresses',[])) if stage=='tcp' else str(transport.get('address',''))
+                            elif stage=='proxy':
+                                self.statekey='connecting_proxy'
+                                self.connection_detail=str(transport.get('proxy_host',''))+':'+str(transport.get('proxy_port',''))
+                        elif transport.get('event')=='reconnecting':
+                            self.statekey='reconnecting'
+                            self.connection_detail=''
+                            self.hashrate.set('— H/s')
+                            self.reset_backend_rates()
+                            if self.pending_pool:self.pending_pool['deadline']=time.monotonic()+float(transport.get('delay_seconds',60))+30
+                        elif transport.get('event')=='connection_warning':
+                            self.statekey='connection_warning'
+                        elif transport.get('event')=='connection_retry':
+                            self.statekey='connection_retry'
+                            self.connection_detail=''
+                        elif transport.get('event')=='tls_verified' and type(transport.get('port')) is int:
+                            actual=str(transport['host'])+':'+str(transport['port'])
+                            if provider_for(actual)==provider_for(self.run['endpoint']):
+                                self.run['endpoint']=actual
+                                self.endpoint.set(actual)
+                                self.endpoint_var().set(actual)
+                                if self.pending_pool:self.pending_pool['target']=actual
+                    except (ValueError,KeyError,TypeError):pass
                 if self.proc:
                     lower=payload.lower()
-                    if 'new job from ' in lower:
+                    if '\"event\": \"preparing\"' in lower:
+                        self.statekey='preparing_dataset'
+                    elif '\"event\": \"tls_verified\"' in lower:
+                        self.statekey='tls_connected'
+                    elif 'new job from ' in lower:
                         self.statekey='waiting_shares'
                     elif 'no active pools' in lower or 'connect error' in lower or 'read error:' in lower:
                         self.statekey='reconnecting_pool'
@@ -2199,7 +2289,7 @@ class App:
                 if backend_rate:
                     self.backend_rates[backend_rate[0]]=backend_rate[1]
                     self.update_backend_rates()
-                match = re.search(r'speed 10s/60s/15m\s+([\d.]+)',payload)
+                match = re.search(r'speed (?:1s|10s)/60s/15m\s+([\d.]+)',payload)
                 if match:
                     self.hashrate.set(match[1]+' H/s')
                     self.last_hps = float(match[1])
@@ -2281,8 +2371,15 @@ class App:
             self.refresh_power()
         if self.proc:
             if self.proc.poll() is not None:
-                self.append('EXIT | '+str(self.proc.returncode))
+                exit_code=self.proc.returncode
+                failed_switch=bool(self.pending_pool)
+                self.append('EXIT | '+str(exit_code))
                 self.stop()
+                if exit_code:
+                    self.statekey='engine_failed'
+                    if failed_switch:
+                        self.switch_message='switch_failed'
+                        self.switch_label.configure(text=self.t(self.switch_message))
             else:
                 now = time.monotonic()
                 delta = now-self.last
@@ -2317,6 +2414,8 @@ class App:
                     self.stop()
         self.update_author_label()
         state_text = self.t(self.statekey)
+        if self.statekey in ('connecting_dns','connecting_tcp','connecting_tls','connecting_proxy') and getattr(self,'connection_detail',''):
+            state_text+=' · '+self.connection_detail
         if self.switch_message=='pool_paused' and self.cooldown_remaining(self.endpoint.get()):
             state_text+=' · '+self.t('pool_cooldown').format(minutes=math.ceil(self.cooldown_remaining(self.endpoint.get())/60))
         if self.proc:

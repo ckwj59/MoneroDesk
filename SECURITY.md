@@ -1,15 +1,15 @@
-# Security review
+# Security policy and review scope
 
-GitHub CodeQL analyzes the Python application, C# installer and the corresponding C/C++ engine/plugin source on pushes, pull requests, a weekly schedule, and manual workflow dispatch. The engine source archive is unpacked before analysis. No mining process is started by this workflow.
+Use the repository Security reporting tools for a sensitive report, or open an issue with redacted details. Never post seed phrases, private keys, passwords or full local account files.
 
-View runs under **Actions → CodeQL Security Review**, and findings under **Security → Code scanning**. Scan completion, warnings, failures, and open findings must be evaluated before claiming a clean result. A passing run is not a malware certification or a guarantee of safety.
+The app uses verified TLS for remote mining. Known pool certificate pins are explicit in `TLS-TRUST-POLICY.md`; an unexpected certificate is not automatically trusted. The local HTTP proxy route is limited to an already-enabled loopback endpoint. The app does not install a proxy, change DNS, disable antivirus, install an MSR driver or modify system security policy.
 
-Dependabot checks supported Python dependencies and GitHub Actions versions. It does not audit all statically bundled native libraries or certify the bundled executable. Release installer checksums establish integrity, not safety.
+## Automated checks
 
-## Reporting a vulnerability
+- GitHub CodeQL: Python, C/C++ and C# source analysis, with security-extended queries. Pinned RandomX source is unpacked into the analysis tree; CUDA `.cu` device-code coverage is not comprehensive.
+- CI: installer/DLL checksum verification, blank main address and visible author-allocation defaults, protocol parsing, TLS failure/retry and recovery tests. These tests use local simulated servers, not paid GitHub-hosted mining workloads.
+- Dependabot: pip requirements and GitHub Actions update monitoring.
 
-Use the repository's private vulnerability reporting feature if it is available. Do not post credentials, seed phrases, private keys, or exploitable private details in public issues. For non-sensitive concerns, open an issue with the affected version and a minimal reproduction.
+An analysis job that succeeds can still report findings. Inspect the Security/code-scanning tab as well as Actions. Missing or failed analysis is not a clean result. Automated scanning is not a GitHub certification, a complete malware analysis, or a guarantee of safety. Executables are not represented as signed or independently audited.
 
-## Disclosed mining behavior
-
-Mining starts manually. The main payout field is empty. The public author recipient is visible; optional 1% mining-time allocation is enabled by default and can be disabled. Pool queries transmit the public query address to the relevant pool. The app does not provide a wallet-transfer function.
+Old implementation files are removed from current main because they are no longer used, not to suppress findings. Historical alerts are left to GitHub's normal analysis lifecycle; no alerts are manually dismissed as false positives by this release.

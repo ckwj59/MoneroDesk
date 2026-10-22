@@ -1,0 +1,11 @@
+{
+  "sha256": "c5a025e8457cd8560a7c4b94747be42c746e89b53f1d7fb12a0c0642e36e7055",
+  "algorithm": "rx/0",
+  "implementation": "XMR ordered warp-cooperative CUDA VM (32 lanes) with separately licensed RandomX CUDA AES/Blake helpers",
+  "threads_per_block": 128,
+  "decoded_program_storage": "device memory",
+  "default_batch": 1024,
+  "experimental": true,
+  "network_validation": true,
+  "validation_report": "GPU-OCCUPANCY-VALIDATION.json"
+}

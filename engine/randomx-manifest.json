@@ -1,0 +1,8 @@
+{
+  "source": "https://github.com/tevador/RandomX",
+  "commit": "a901d5bff16517ecf5c98c92c233e8480e259fc4",
+  "sha256": "43aec1e08663a8d16c1c608afed42793f6cd53549f448d3c343b3be38f4c7af2",
+  "license": "BSD-3-Clause",
+  "supported_algorithm": "rx/0",
+  "build": "CMake MSVC x64 Release BUILD_SHARED_LIBS=ON CMAKE_WINDOWS_EXPORT_ALL_SYMBOLS=ON"
+}

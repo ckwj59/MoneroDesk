@@ -11,3 +11,7 @@ dist/
 artifacts/
 .env
 .env.*
+native/RandomX/
+native/build/
+native/cpu-build/
+native/gpu-build/
