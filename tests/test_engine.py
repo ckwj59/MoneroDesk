@@ -54,6 +54,18 @@ class ProtocolTests(unittest.TestCase):
 
 
 class NativeIntegrationTests(unittest.TestCase):
+    def test_vm_tries_large_page_scratchpad_then_falls_back(self):
+        rx=engine.RandomX.__new__(engine.RandomX)
+        rx.flags=10;rx.cache=object();rx.dataset=None
+        rx.lib=type('Lib',(),{})()
+        calls=[]
+        def create(flags,cache,dataset):
+            calls.append(flags)
+            return None if len(calls)==1 else 123
+        rx.lib.randomx_create_vm=create
+        self.assertEqual(rx.vm(),123)
+        self.assertEqual(calls,[11,10])
+
     def test_upstream_known_answers(self):
         engine.self_test()
 

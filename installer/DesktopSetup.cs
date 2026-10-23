@@ -9,7 +9,7 @@ class DesktopSetup {
   Application.EnableVisualStyles();
   bool extract=args.Length==2 && args[0]=="--extract-test";
   string dest=extract?Path.GetFullPath(args[1]):Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData),"Programs","XMR-CPU-GPU");
-  if(!extract && MessageBox.Show("安装 XMR CPU + GPU（Windows x64）\n\n安装位置："+dest+"\n\n已验证：CPU、NVIDIA CUDA 矿池挖矿与 TLS 加密。\n暂不支持：AMD OpenCL、GPU 独挖、Linux。\nGPU 目前为实验实现，速度可能低于 CPU。\n程序不会自动开始挖矿。\n\n是否安装？","XMR 安装",MessageBoxButtons.OKCancel,MessageBoxIcon.Information)!=DialogResult.OK)return 0;
+  if(!extract && MessageBox.Show("安装 XMR CPU + GPU（Windows x64）\n\n安装位置："+dest+"\n\n安装包包含 XMRig CPU 与 NVIDIA CUDA 后端。CUDA 需要兼容的 NVIDIA 显卡和驱动；TLS 矿池要求有效证书。\n本次未完成 GPU 端到端验证，不保证具体算力；CPU/GPU 同时运行时性能也受散热和功耗影响。\nAMD OpenCL、Linux 及 GPU 独挖未在本次验证范围内。\n程序不会自动开始挖矿。\n\n是否安装？","XMR 安装",MessageBoxButtons.OKCancel,MessageBoxIcon.Information)!=DialogResult.OK)return 0;
   try {
    foreach(string name in new string[]{"XMR","XMR-Engine"})foreach(var proc in Process.GetProcessesByName(name)) {
     try {if(proc.MainModule.FileName.StartsWith(dest+Path.DirectorySeparatorChar,StringComparison.OrdinalIgnoreCase))throw new IOException("请先关闭该目录的 XMR，再安装。");}

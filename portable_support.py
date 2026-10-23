@@ -29,7 +29,7 @@ def engine_name():
     return 'XMR-Engine.exe' if IS_WINDOWS else 'xmr-engine'
 
 def cuda_files():
-    return ('xmr-randomx-cuda.dll',) if IS_WINDOWS else ('libxmr-cuda.so',)
+    return ('xmrig-cuda.dll',) if IS_WINDOWS else ('libxmrig-cuda.so',)
 
 def linux_hardware(result, proc=Path('/proc'), system=Path('/sys')):
     try:

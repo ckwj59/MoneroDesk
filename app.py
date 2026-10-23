@@ -1,4 +1,4 @@
-"""XMR: original full interface, independent engine integration under development."""
+"""XMR desktop interface with the bundled XMRig runtime bridge."""
 import ctypes
 from ctypes import wintypes
 import hashlib
@@ -495,6 +495,20 @@ def detected_threads(device,profile,current=1):
         return max(1,device['logical']//2)
     return max(1,min(device['logical'],current))
 
+def recommend_threads(physical,logical,l3_bytes):
+    """Choose a cache-aware starting point while allowing some SMT workers.
+
+    Capping strictly at physical cores left measured RandomX throughput lower
+    on the 16-core/32-thread 8940HX; using every SMT thread was also slower.
+    Start with cache-supported physical workers plus half the SMT siblings.
+    This remains a starting point, not a guarantee for thermally constrained CPUs.
+    """
+    physical=max(1,int(physical));logical=max(1,int(logical))
+    cache_limit=(int(l3_bytes)//(2*1024**2)) if l3_bytes else physical
+    primary=min(physical,cache_limit)
+    smt_extra=max(0,logical-physical)//2
+    return max(1,min(logical,primary+smt_extra))
+
 def provider_for(endpoint):
     if endpoint.lower() in ('gulf.moneroocean.stream:20001','gulf.moneroocean.stream:20128','gulf.moneroocean.stream:443'):
         return 'MoneroOcean'
@@ -691,8 +705,7 @@ def hardware():
     if not IS_WINDOWS: result=linux_hardware(result)
     mem = psutil.virtual_memory()
     result.update(total=mem.total, available=mem.available)
-    cache_limit = result['l3'] // (2 * 1024**2) if result['l3'] else result['physical']
-    result['recommended'] = max(1, min(result['physical'], cache_limit, max(1, result['logical']//2)))
+    result['recommended'] = recommend_threads(result['physical'],result['logical'],result['l3'])
     return result
 
 
@@ -704,10 +717,12 @@ def parse_backend_rate(line):
 
 def verify_gpu_bundle(engine):
     manifest=json.loads((engine/'gpu-manifest.json').read_text(encoding='utf-8'))
-    for name in cuda_files():
+    for name,digest in manifest.get('files',{}).items():
         file=engine/name
-        if not file.is_file() or hashlib.sha256(file.read_bytes()).hexdigest()!=manifest['files'].get(name):
+        if not file.is_file() or hashlib.sha256(file.read_bytes()).hexdigest()!=digest:
             raise ValueError('GPU plugin missing or damaged: '+name)
+    if not manifest.get('files') or any(name not in manifest['files'] for name in cuda_files()):
+        raise ValueError('GPU plugin manifest is incomplete')
 
 
 TEXT['zh']['gpu_efficiency']='GPU 效率提示：门罗币 RandomX 更适合 CPU。CPU 与 GPU 同时挖矿可能因共享功耗、散热和内存带宽而降低 CPU 算力，总算力也可能下降。请比较稳定运行后的总算力与功耗，再决定是否开启 GPU。'
@@ -719,7 +734,7 @@ TEXT['zh'].update(cpu_enable='启用 CPU 挖矿',gpu_backend='GPU 挖矿后端',
 
 def make_config(mode, endpoint, wallet, threads, tls, gpu_backend="off", cpu_enabled=True):
     solo = mode in ('solo', 'remote')
-    return {'autosave':False, 'watch':True, 'background':False, 'colors':False, 'print-time':10,
+    return {'autosave':False, 'watch':False, 'background':False, 'colors':False, 'print-time':10,
             'donate-level':0, 'donate-over-proxy':0, 'http':{'enabled':False},
             'randomx':{'mode':'auto', 'numa':True, 'rdmsr':False, 'wrmsr':False},
             'cpu':{'enabled':cpu_enabled, 'huge-pages':True, 'hw-aes':None, 'priority':1, 'yield':True,
@@ -913,6 +928,8 @@ class App:
         self.runtime = tk.StringVar(value='00:00:00')
         self.statekey = 'idle'
         self.device = hardware()
+        # This user explicitly prefers the maximum detected logical thread
+        # count. The cache-aware recommendation remains visible in Hardware.
         self.threads.set(self.device['logical'])
         try:
             saved = json.loads((DATA/'settings.json').read_text(encoding='utf-8'))
@@ -2070,9 +2087,6 @@ class App:
         if self.proc or self.checking:
             return
         try:
-            if self.gpu_enabled.get():
-                if self.gpu_backend.get()!='NVIDIA CUDA' or self.mode.get()!='pool':
-                    raise ValueError('当前独立 GPU 后端仅支持 NVIDIA CUDA 矿池模式。 / Independent GPU currently supports NVIDIA CUDA pool mode only.')
             exe = self.verify_engine()
             wallet = self.wallet.get().strip()
             if not valid_wallet(wallet):
@@ -2131,11 +2145,7 @@ class App:
         return cfg
 
     def write_config(self):
-        """Send the active public payout configuration over the child pipe.
-
-        The miner needs the payout address in memory, but does not need a
-        persistent plaintext JSON file on disk.
-        """
+        """Send public payout settings to the bridge; its temporary XMRig config is deleted on exit."""
         proc=self.proc
         if not proc or proc.stdin is None or proc.stdin.closed:
             raise RuntimeError('Miner configuration channel is unavailable')

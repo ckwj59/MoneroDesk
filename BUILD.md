@@ -1,6 +1,6 @@
 # Build and inspect
 
-The supplied Windows runtime is ready to run; source builds require Python 3.11+, Tk, CMake, MSVC x64 build tools, and a compatible CUDA Toolkit for NVIDIA builds. No XMRig is needed.
+The Windows x64 installer bundles XMRig 6.26.0, its optional CUDA plugin/runtime files, an authenticated loopback control bridge, and the existing desktop UI. Source builds require Python 3.12+, the packages in `requirements.txt`, the .NET Framework C# compiler used by the installer script, and the Tcl/Tk data archive at `installer/tcl-runtime.zip`. The build script collects the Tcl/Tk runtime files and verifies the prebuilt XMRig binary and plugin hashes against their manifests.
 
 ## Python and GUI
 
@@ -12,21 +12,8 @@ python tests/verify_distribution.py
 python app.py
 ```
 
-`build.ps1` rebuilds the independent bridge and GUI into `dist/XMR` and refreshes the bridge manifest. Native DLLs are copied from `engine/`; rebuilding native code requires refreshing its corresponding SHA-256 manifests before loading the new DLLs.
+`build.ps1` rebuilds the bridge and GUI into `dist/XMR`, then verifies the bundled XMRig and GPU plugin hashes. On Windows, run `powershell -File installer/build_installer.ps1` to create the single-file setup executable in `downloads/`, refresh its checksum, and verify both archive contents and extraction. The installer places the app under the current user's LocalAppData and creates a desktop shortcut; it does not start mining.
 
-## Native dependencies
+The runtime XMRig executable and CUDA plugin are prebuilt third-party binaries, not rebuilt by `build.ps1`. The installer includes the corresponding XMRig source archive and license notices. The CUDA plugin still requires a compatible NVIDIA display driver; the package does not install drivers or alter system permissions.
 
-Extract `engine/RandomX-source.zip` into `native/`; the archive already contains the `RandomX/` top-level folder. Build its pinned source with:
-
-```powershell
-cmake -S native/RandomX -B native/build -DBUILD_SHARED_LIBS=ON -DCMAKE_WINDOWS_EXPORT_ALL_SYMBOLS=ON
-cmake --build native/build --config Release --target randomx
-cmake -S native/cpu -B native/cpu-build
-cmake --build native/cpu-build --config Release
-cmake -S native/gpu -B native/gpu-build -DXMR_VM_LANES=32 -DXMR_VM_THREADS=128 -DXMR_VM_CODE_GLOBAL=ON
-cmake --build native/gpu-build --config Release
-```
-
-The CUDA host adapter includes RandomX headers using this relative layout. CPU CMake links `native/build/Release/randomx.lib`. Preserve precise division/square root, `--fmad=false`, instruction ordering and all correctness checks. Do not enable fast-math or ship unverified candidates. Compiler/toolkit differences may change binary hashes; the supplied hashes describe the distributed binaries, not a bit-for-bit reproducible build promise.
-
-The installer source embeds a `payload.zip` resource compiled with the .NET Framework C# compiler. Its safe extraction, process checks and settings preservation are in `installer/DesktopSetup.cs`. The distributed executable and manifest have been extraction-verified; do not represent a newly rebuilt installer as tested until repeating that verification.
+The installer source embeds a `payload.zip` resource compiled with the .NET Framework C# compiler. Its safe extraction, process checks and settings preservation are in `installer/DesktopSetup.cs`. A newly rebuilt installer is ready only after `installer/build_installer.ps1` completes its extraction/hash verification.

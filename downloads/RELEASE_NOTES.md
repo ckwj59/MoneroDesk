@@ -1,10 +1,10 @@
-# XMR independent engine preview
+# XMR Windows x64 release
 
-- Replaces the previous XMRig runtime with the independent CPU/CUDA pool engine, preserving the original desktop UI.
-- Includes verified TLS/system-local-proxy routing, cancellable recovery, separate CPU/GPU rates and one-second reporting.
-- Ships only the validated 128-thread / 32-lane GPU kernel. Additional grouping trials did not produce a meaningful improvement and are not included.
+- Restores the bundled XMRig 6.26.0 CPU engine and supported GPU backends behind the existing desktop interface.
+- Keeps verified TLS routing, pool recovery, the disclosed author-allocation control and separate CPU/GPU rates.
+- Uses an authenticated, random-token XMRig control API bound to loopback for live wallet/pool reconfiguration without a full miner restart.
 - Main payout address remains blank on a clean installation; disclosed optional 1% author time allocation remains enabled by default.
-- Removes the obsolete installer and XMRig source/binaries from the current branch. Git history is retained.
-- Experimental Windows x64/NVIDIA support; see COMPATIBILITY.md. No safety certification or performance guarantee is claimed.
+- Includes the XMRig source archive, GPL notices, CUDA plugin and corresponding runtime files. A compatible display driver is required.
+- No sustained hashrate or earnings guarantee is claimed; verify stability and thermal/power limits on your own hardware.
 
-This is the same validated desktop installer; SHA-256 is listed in SHA256SUMS.txt.
+The setup executable embeds the current `dist/XMR` build. Its SHA-256 is listed in `SHA256SUMS.txt`; regenerate it with `installer/build_installer.ps1` after changing the build output.

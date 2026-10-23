@@ -1,0 +1,10 @@
+{
+  "version": "6.26.0-custom",
+  "developer_donation": 0,
+  "sha256": "3e2ba120457386e45099e09f309f8a5c0526773c502b220103b9583f43228ee3",
+  "source": "xmrig/xmrig v6.26.0 b2ca72480c58d197e18c885d9fc1a0c8d517e60a",
+  "gpu_backends": [
+    "cuda",
+    "opencl"
+  ]
+}

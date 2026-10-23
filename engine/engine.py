@@ -188,7 +188,11 @@ class RandomX:
         if not self.cache:
             raise RuntimeError('RandomX cache is not prepared')
         flags=self.flags | (4 if self.dataset else 0)
-        vm=self.lib.randomx_create_vm(flags|1,self.cache,self.dataset) if self.large_pages else None
+        # Large-page dataset allocation and large-page VM scratchpads are
+        # independent RandomX allocations. Always try the latter; the previous
+        # dataset-only gate silently disabled scratchpad large pages whenever
+        # the ~2 GiB dataset fell back to ordinary pages.
+        vm=self.lib.randomx_create_vm(flags|1,self.cache,self.dataset)
         if not vm:vm = self.lib.randomx_create_vm(flags, self.cache, self.dataset)
         if not vm:
             raise MemoryError('RandomX worker VM allocation failed')
@@ -233,10 +237,20 @@ class CpuWorkers:
         self.threads = []
         self.hashes = self.used = 0
         self.origin = secrets.randbits(32)
-        # Keep the validated default. Affinity/batch experiments are opt-in;
-        # round-two measurements did not establish a stable improvement.
-        self.batch_size=32
+        # Larger native batches reduce Python/lock hand-offs around RandomX.
+        # On Windows, prefer one logical CPU per physical core before placing
+        # remaining workers on SMT siblings. Pinning every logical CPU showed
+        # no benefit in local tests, so full-thread runs remain scheduler-managed.
+        self.batch_size=max(32,min(256,count*8))
         self.affinity=None
+        if os.name=='nt' and count < (os.cpu_count() or 1):
+            try:
+                from cpu_topology import cpu_order
+                order=cpu_order()
+                if len(order)>=count:
+                    self.affinity=order[:count]
+            except (OSError, AttributeError, ImportError):
+                pass
 
     def next_batch(self,requested=32):
         with self.lock:
@@ -252,8 +266,11 @@ class CpuWorkers:
             vm = None
             try:
                 if self.affinity and index<len(self.affinity):
-                    from cpu_topology import pin_current
-                    pin_current(self.affinity[index])
+                    try:
+                        from cpu_topology import pin_current
+                        pin_current(self.affinity[index])
+                    except (OSError, AttributeError, ImportError):
+                        pass  # Affinity is only a hint; never fail mining over it.
                 vm = self.rx.vm()
                 while not self.stop_event.is_set():
                     nonces = self.next_batch(self.batch_size)

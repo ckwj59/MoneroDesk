@@ -1,1 +1,10 @@
-{"files": {"xmr-randomx-cuda.dll": "c5a025e8457cd8560a7c4b94747be42c746e89b53f1d7fb12a0c0642e36e7055"}}
+{
+  "version": "6.22.1-cuda12.9",
+  "source": "https://github.com/xmrig/xmrig-cuda/releases/tag/v6.22.1",
+  "archive_sha256": "bc7a2fcee616b310c91d07f285a6a9f2d80257b365a339fe2f80bbf3da5567bd",
+  "files": {
+    "nvrtc-builtins64_129.dll": "60c0705ef1bcef8de12f442b424e2edc649956611b8d04990ef17abb1df748a2",
+    "nvrtc64_120_0.dll": "69a3b8e00fdf6c64805bd369b037db91f1ac1fb25b3411676b434736df945249",
+    "xmrig-cuda.dll": "af747282bf8a68dbd5d4b5db4fafbba61d0a418e27d62090844f36d039bef1f0"
+  }
+}
