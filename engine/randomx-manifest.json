@@ -5,6 +5,6 @@
   "license": "BSD-3-Clause",
   "supported_algorithm": "rx/0",
   "build": "CMake MSVC x64 Release BUILD_SHARED_LIBS=ON CMAKE_WINDOWS_EXPORT_ALL_SYMBOLS=ON",
-  "source_archive_sha256": "666c5d5a7c2f41097e3636d2c271203b89b9a8cc35af71c46a1a4346f79e8a56",
-  "source_patch": "Catches std::bad_alloc explicitly and preserves std::exception cleanup; no RandomX algorithm changes."
+  "source_archive_sha256": "9a47825cd3f225d0f0c6c1cbcf0578deeb19d47e236e28f8dd04cb212c5e2969",
+  "source_patch": "Cache and dataset allocations use unique_ptr deleters for exception-safe partial cleanup; no RandomX algorithm changes."
 }
