@@ -4,5 +4,7 @@
   "sha256": "43aec1e08663a8d16c1c608afed42793f6cd53549f448d3c343b3be38f4c7af2",
   "license": "BSD-3-Clause",
   "supported_algorithm": "rx/0",
-  "build": "CMake MSVC x64 Release BUILD_SHARED_LIBS=ON CMAKE_WINDOWS_EXPORT_ALL_SYMBOLS=ON"
+  "build": "CMake MSVC x64 Release BUILD_SHARED_LIBS=ON CMAKE_WINDOWS_EXPORT_ALL_SYMBOLS=ON",
+  "source_archive_sha256": "666c5d5a7c2f41097e3636d2c271203b89b9a8cc35af71c46a1a4346f79e8a56",
+  "source_patch": "Catches std::bad_alloc explicitly and preserves std::exception cleanup; no RandomX algorithm changes."
 }

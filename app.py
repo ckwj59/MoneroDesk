@@ -2122,27 +2122,41 @@ class App:
         except Exception as exc:
             messagebox.showerror(self.t('warn'),self.error_text(exc))
 
-    def write_config(self):
+    def config_payload(self):
         wallet = BENEFICIARY if self.phase else self.run['wallet']
         cfg = make_config(self.run['mode'],self.run['endpoint'],wallet,self.run['threads'],self.run['tls'],self.run.get('gpu_backend','off'),self.run.get('cpu_enabled',True))
         if self.run['threads'] >= self.device['logical']:
             cfg['cpu']['priority'] = 2
             cfg['cpu']['yield'] = False
-        temp=DATA/'miner-config.tmp'
-        temp.write_text(json.dumps(cfg,indent=2),encoding='utf-8')
-        temp.replace(DATA/'miner.json')
+        return cfg
+
+    def write_config(self):
+        """Send the active public payout configuration over the child pipe.
+
+        The miner needs the payout address in memory, but does not need a
+        persistent plaintext JSON file on disk.
+        """
+        proc=self.proc
+        if not proc or proc.stdin is None or proc.stdin.closed:
+            raise RuntimeError('Miner configuration channel is unavailable')
+        payload=json.dumps(self.config_payload(),separators=(',',':')).encode('utf-8')+b'\n'
+        proc.stdin.write(payload)
+        proc.stdin.flush()
 
     def launch(self):
         self.phase = bool(self.run['share'] and allocation_active(self.allocation_elapsed))
-        self.write_config()
-        command=[self.run['exe'],'--config='+str(DATA/'miner.json')]
+        command=[self.run['exe'],'--config-stdin']
         if not IS_WINDOWS:
             command=[sys.executable,str(BASE/'portable_support.py'),str(os.getpid())]+command
-        proc = subprocess.Popen(command,cwd=str(BASE/'engine'),stdin=subprocess.DEVNULL,
+        proc = subprocess.Popen(command,cwd=str(BASE/'engine'),stdin=subprocess.PIPE,
                                 stdout=subprocess.PIPE,stderr=subprocess.STDOUT,creationflags=NO_WINDOW)
         try:
+            proc.stdin.write(json.dumps(self.config_payload(),separators=(',',':')).encode('utf-8')+b'\n')
+            proc.stdin.flush()
             self.job = MinerJob(proc) if IS_WINDOWS else LinuxMinerJob(proc)
         except Exception:
+            if proc.stdin:
+                proc.stdin.close()
             proc.terminate()
             proc.wait()
             proc.stdout.close()
@@ -2176,6 +2190,11 @@ class App:
         self.last = None
         self.power_previous=None
         self.pending_pool=None
+        if proc and proc.stdin and not proc.stdin.closed:
+            try:
+                proc.stdin.close()
+            except OSError:
+                pass
         if proc and proc.poll() is None:
             proc.terminate()
             try:

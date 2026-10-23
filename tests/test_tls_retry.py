@@ -23,6 +23,7 @@ class RetryTests(unittest.TestCase):
                     raw.settimeout(3)
                     if tls_mode:
                         context=ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
+                        context.minimum_version=ssl.TLSVersion.TLSv1_2
                         context.load_cert_chain(str(self.cert),str(self.key))
                         with context.wrap_socket(raw,server_side=True) as secure:received.append(secure.recv(1))
                     else:

@@ -7,6 +7,7 @@ import argparse
 import json
 import os
 from pathlib import Path
+import queue
 import threading
 import time
 from dataclasses import dataclass
@@ -77,7 +78,7 @@ CURRENT_ENDPOINT=''
 ACCEPTED_BASE=REJECTED_BASE=0
 SESSION_ACCEPTED=SESSION_REJECTED=0
 
-def run(path,stop_event,factory=None):
+def run(path,stop_event,factory=None,config_stream=None):
     global CURRENT_ENDPOINT,ACCEPTED_BASE,REJECTED_BASE,SESSION_ACCEPTED,SESSION_REJECTED
     ACCEPTED_BASE=REJECTED_BASE=SESSION_ACCEPTED=SESSION_REJECTED=0
     previous_engine_event,previous_solo_event=engine.event,solo.event
@@ -99,15 +100,38 @@ def run(path,stop_event,factory=None):
             m.retain_context=True;m.report_interval=1
             return m
     last_bytes=None
+    updates=queue.Queue(maxsize=1)
+    if config_stream is not None:
+        def receive_configs():
+            try:
+                for line in config_stream:
+                    if line.strip():
+                        try:updates.put_nowait(line)
+                        except queue.Full:
+                            # Replace a stale pending configuration with the
+                            # latest one. The consumer may have drained it
+                            # between Full and get_nowait().
+                            try:updates.get_nowait()
+                            except queue.Empty:pass
+                            try:updates.put_nowait(line)
+                            except queue.Full:pass
+            finally:
+                stop_event.set()
+        threading.Thread(target=receive_configs,name='XMR-config-input',daemon=True).start()
     try:
         while not stop_event.is_set():
-            # Read full JSON before touching running work. A partial write is
-            # retried, and a malformed configuration never silently changes a wallet.
-            data=path.read_bytes()
+            if config_stream is not None:
+                try:data=updates.get(timeout=.1)
+                except queue.Empty:continue
+            else:
+                # Read full JSON before touching running work. A partial write is
+                # retried, and a malformed configuration never silently changes a wallet.
+                data=path.read_bytes()
             if data!=last_bytes:
                 try:incoming=Config.parse(json.loads(data))
                 except json.JSONDecodeError:
-                    stop_event.wait(.1);continue
+                    if config_stream is None:stop_event.wait(.1)
+                    continue
                 if incoming!=config:
                     if miner:miner.stop()
                     if thread:thread.join()
@@ -142,8 +166,12 @@ if __name__=='__main__':
     import sys
     for stream in (sys.stdout,sys.stderr):
         if hasattr(stream,'reconfigure'):stream.reconfigure(encoding='utf-8',errors='backslashreplace')
-    parser=argparse.ArgumentParser();parser.add_argument('--config',type=Path,required=True);args=parser.parse_args()
-    try:run(args.config,threading.Event())
+    parser=argparse.ArgumentParser()
+    source=parser.add_mutually_exclusive_group(required=True)
+    source.add_argument('--config',type=Path)
+    source.add_argument('--config-stdin',action='store_true')
+    args=parser.parse_args()
+    try:run(args.config,threading.Event(),config_stream=sys.stdin.buffer if args.config_stdin else None)
     except KeyboardInterrupt:pass
     except Exception as exc:
         print('XMR ERROR | '+str(exc),flush=True);raise SystemExit(1)

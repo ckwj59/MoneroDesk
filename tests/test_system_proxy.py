@@ -29,6 +29,7 @@ class ProxyTlsTests(RetryTests):
                     raw.sendall(f'HTTP/1.1 {status} Test\r\n\r\n'.encode())
                     if status==200:
                         context=ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
+                        context.minimum_version=ssl.TLSVersion.TLSv1_2
                         context.load_cert_chain(str(self.cert),str(self.key))
                         with context.wrap_socket(raw,server_side=True) as conn:conn.recv(1)
             except OSError:pass

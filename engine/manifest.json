@@ -2,7 +2,7 @@
   "version": "XMR-independent-0.2-development",
   "target": "windows-x64",
   "developer_donation": 0,
-  "sha256": "6efe306d3291aa778bc6fc724182b03661bc972fc7c2f07c36aeddcdacb8c68e",
+  "sha256": "09d25b8f3dea5966fbbb0b74f6acb8dedcd86b173f865c6aa525414794620d18",
   "source": "independent engine with tevador/RandomX algorithm library",
   "gpu_backends": [
     "cuda-experimental"

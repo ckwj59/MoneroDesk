@@ -2,9 +2,10 @@ $ErrorActionPreference = 'Stop'
 Set-Location -LiteralPath $PSScriptRoot
 $target = Join-Path $PSScriptRoot 'dist/XMR'
 New-Item -ItemType Directory -Path "$target/engine" -Force | Out-Null
-python -m PyInstaller --noconfirm --onefile --name XMR-Engine --distpath "$target/engine" --workpath build/engine --specpath build engine/legacy_bridge.py
+Remove-Item -LiteralPath 'XMR-Engine.spec','XMR.spec' -Force -ErrorAction SilentlyContinue
+python -m PyInstaller --noconfirm --onefile --name XMR-Engine --distpath "$target/engine" --workpath build/engine --specpath . engine/legacy_bridge.py
 if ($LASTEXITCODE -ne 0) { throw 'Engine build failed' }
-python -m PyInstaller --noconfirm --onefile --windowed --name XMR --icon app.ico --add-data 'locales;locales' --add-data 'flags;flags' --add-data 'app.ico;.' --add-data 'app.png;.' --distpath $target --workpath build/gui --specpath build app.py
+python -m PyInstaller --noconfirm --onefile --windowed --name XMR --icon app.ico --add-data 'locales;locales' --add-data 'flags;flags' --add-data 'app.ico;.' --add-data 'app.png;.' --distpath $target --workpath build/gui --specpath . app.py
 if ($LASTEXITCODE -ne 0) { throw 'GUI build failed' }
 foreach($item in @('engine','licenses','source','locales','flags','app.ico','app.png','app.py','portable_support.py','tls_transport.py','system_proxy.py','TLS-TRUST-POLICY.md','LICENSE','README.md','THIRD_PARTY.md')) {
     if ($item -eq 'engine') {

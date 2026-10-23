@@ -15,7 +15,8 @@ gpu = json.loads((root/'engine/gpu-manifest.json').read_text())['files']
 for filename, digest in gpu.items():
     assert hashlib.sha256((root/'engine'/filename).read_bytes()).hexdigest() == digest
 installer = root/'downloads/XMR-CPU-GPU-Windows-x64-Setup.exe'
-assert hashlib.sha256(installer.read_bytes()).hexdigest() == 'cfa1a0a2da51fcc5ca95bd98cf9b36048cd775f90680f9bd95040365ef9725c6'
+expected_hash = (root/'downloads/SHA256SUMS.txt').read_text(encoding='ascii').split()[0]
+assert hashlib.sha256(installer.read_bytes()).hexdigest() == expected_hash
 with zipfile.ZipFile(installer) as archive:
     assert archive.testzip() is None
     manifest = json.loads(archive.read('payload-manifest.json'))

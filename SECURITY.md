@@ -6,7 +6,7 @@ The app uses verified TLS for remote mining. Known pool certificate pins are exp
 
 ## Automated checks
 
-- GitHub CodeQL: Python, C/C++ and C# source analysis, with security-extended queries. Pinned RandomX source is unpacked into the analysis tree; CUDA `.cu` device-code coverage is not comprehensive.
+- GitHub CodeQL: Python, C/C++ and C# source analysis, with security-extended queries. The pinned RandomX archive carries the narrow allocation-exception clarification recorded in `engine/randomx-manifest.json`; CUDA `.cu` device-code coverage is not comprehensive.
 - CI: installer/DLL checksum verification, blank main address and visible author-allocation defaults, protocol parsing, TLS failure/retry and recovery tests. These tests use local simulated servers, not paid GitHub-hosted mining workloads.
 - Dependabot: pip requirements and GitHub Actions update monitoring.
 
